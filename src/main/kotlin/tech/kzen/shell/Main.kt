@@ -8,31 +8,12 @@ import java.nio.file.Paths
 
 
 fun main(args: Array<String>) {
-    val defaultTemplatesPath =
-            "${KzenShellPackage.pathName}/templates/default"
-
-    val resourceReader = ResourceReader()
-    val resourceTree = resourceReader.read(defaultTemplatesPath)
-
     val model = ProjectModel(
-            "tech.kzen",
-            "foo")
+            "tech.kzen.shell",
+            "shell-launcher",
+            "launcher")
 
-    val defaultTemplate = ResourceTemplate()
+    val projectPath = ProjectCreator.createFromResource(model)
 
-    val renderedDefaultTemplate =
-            defaultTemplate.render(resourceTree, model)
-
-    val resourceWriter = ResourceWriter()
-    val destinationPath = Paths.get("work/${model.artifactId}")
-    resourceWriter.write(destinationPath, renderedDefaultTemplate)
-
-//    println(resourceTree.files.keys)
-
-
-//    println("Hello, world! - ${getAnswer()}")
-//    for (resourceInfo in KzenShellPackage.resources) {
-//    for (resourceInfo in KzenShellPackage.resources) {
-//        println(resourceInfo.resourceName)
-//    }
+    println("projectPath: $projectPath")
 }
