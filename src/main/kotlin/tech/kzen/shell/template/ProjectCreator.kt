@@ -1,5 +1,6 @@
-package tech.kzen.shell
+package tech.kzen.shell.template
 
+import tech.kzen.shell.KzenShellPackage
 import tech.kzen.shell.model.ProjectModel
 import tech.kzen.shell.resource.ResourceReader
 import tech.kzen.shell.resource.ResourceTemplate
