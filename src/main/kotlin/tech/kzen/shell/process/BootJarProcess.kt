@@ -4,6 +4,7 @@ import java.nio.file.Path
 
 
 class BootJarProcess private constructor (
+        val name: String,
         private val process: Process,
         private val drain: Thread,
         private val processRegistry: ProcessRegistry
@@ -14,15 +15,20 @@ class BootJarProcess private constructor (
                 port: Int,
                 processRegistry: ProcessRegistry
         ): BootJarProcess {
+            val home = location.parent
+            val name = home.fileName.toString()
+
             val process = startProcess(
-                    location.parent, location, port, processRegistry)
+                    name, home, location, port, processRegistry)
+
             val drain = startDrain(process)
 
-            return BootJarProcess(process, drain, processRegistry)
+            return BootJarProcess(name, process, drain, processRegistry)
         }
 
 
         private fun startProcess(
+                name: String,
                 home: Path,
                 jar: Path,
                 port: Int,
@@ -37,7 +43,12 @@ class BootJarProcess private constructor (
                     .directory(home.toFile())
                     .redirectErrorStream(true)
 
-            return processRegistry.start(processSpec)
+            val attributes = mapOf(
+                    "port" to port,
+                    "location" to jarPath)
+
+            return processRegistry.start(
+                    name, processSpec, attributes)
         }
 
 
