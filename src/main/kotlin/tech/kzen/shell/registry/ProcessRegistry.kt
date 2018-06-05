@@ -1,7 +1,6 @@
-package tech.kzen.shell.process
+package tech.kzen.shell.registry
 
 import org.springframework.stereotype.Component
-import java.nio.file.Path
 import javax.annotation.PreDestroy
 
 

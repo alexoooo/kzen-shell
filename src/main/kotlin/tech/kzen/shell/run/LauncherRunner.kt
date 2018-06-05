@@ -11,7 +11,7 @@ import java.nio.file.Paths
 
 
 @Component
-class ShellRunner(
+class LauncherRunner(
         private val properties: ShellProperties,
         private val artifactRepo: ArtifactRepo,
         private val bootJarRunner: BootJarRunner
@@ -24,7 +24,8 @@ class ShellRunner(
 
         val freePort = SocketUtils.findAvailableTcpPort(49152, 65535)
 
-//        val process =
-        bootJarRunner.start(path, freePort)
+
+        val name = path.fileName.toString()
+        bootJarRunner.start(name, path, freePort)
     }
 }

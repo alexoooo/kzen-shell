@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 
 @Component
@@ -18,17 +19,26 @@ class ArtifactRepo {
         if (Files.exists(path)) {
             return false
         }
-        logger.info {"downloading: $download"}
 
-        val downloadBytes = download
-                .toURL()
-                .openStream()
-                .use { ByteStreams.toByteArray(it) }
+        val fileBytes =
+            if (download.scheme == "file") {
+                val sourcePath = Paths.get(download)
+                logger.info {"reading from disk: $sourcePath"}
 
-        logger.info {"download complete: ${downloadBytes.size}"}
+                Files.readAllBytes(sourcePath)
+            }
+            else {
+                logger.info {"downloading: $download"}
+
+                download.toURL()
+                        .openStream()
+                        .use { ByteStreams.toByteArray(it) }
+            }
+
+        logger.info {"done (size: ${fileBytes.size})"}
 
         Files.createDirectories(path.parent)
-        Files.write(path, downloadBytes)
+        Files.write(path, fileBytes)
         return true
     }
 }

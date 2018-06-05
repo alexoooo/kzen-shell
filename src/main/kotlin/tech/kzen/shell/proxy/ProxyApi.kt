@@ -11,6 +11,10 @@ class ProxyApi(
 ) {
     @Bean
     fun counterRouter() = router {
+        GET("/shell/project", proxyHandler::list)
+        GET("/shell/project/start", proxyHandler::start)
+        GET("/shell/project/stop", proxyHandler::stop)
+
         GET("/**", proxyHandler::handle)
     }
 }
