@@ -57,7 +57,8 @@ class ProcessRegistry {
 
     @Synchronized
     fun get(name: String): Info {
-        return processes[name]!!
+        return processes[name]
+                ?: throw IllegalArgumentException("Unknown project: $name")
     }
 
 

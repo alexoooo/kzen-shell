@@ -110,10 +110,17 @@ class ProxyHandler(
 
         return try {
             urlStream = url.openStream()
+
             val downloadBytes = ByteStreams.toByteArray(urlStream)
-            ServerResponse
-                    .ok()
-                    .body(Mono.just(downloadBytes))
+
+            val responseBuilder = ServerResponse.ok()
+
+            if (downloadBytes.isEmpty()) {
+                responseBuilder.build()
+            }
+            else {
+                responseBuilder.body(Mono.just(downloadBytes))
+            }
         }
         catch (e: IllegalStateException) {
             ServerResponse

@@ -28,8 +28,9 @@ class ProjectRegistry(
 
         const val libsPath = "kzen-project-jvm/build/libs"
 
-        const val mainJarPrefix = "kzen-project-jvm-"
-        const val mainJarSuffix = ".jar"
+        const val mainJar = "main.jar"
+        const val gradleMainJarPrefix = "kzen-project-jvm-"
+        const val gradleMainJarSuffix = ".jar"
     }
 
 
@@ -57,11 +58,27 @@ class ProjectRegistry(
     }
 
 
-    private fun startImpl(name: String, location: Path): ProjectInfo {
-        val libsFolder = location.resolve(libsPath)
+    private fun startImpl(name: String, projectHome: Path): ProjectInfo {
+        val jarPath = locateJar(projectHome)
 
+        val freePort = SocketUtils.findAvailableTcpPort(minPort, maxPort)
+
+        val process = bootJarRunner.start(name, jarPath, freePort, projectHome)
+
+        return ProjectInfo(
+                name, projectHome, process)
+    }
+
+
+    private fun locateJar(projectHome: Path): Path {
+        val mainJar = projectHome.resolve("main.jar")
+        if (Files.exists(mainJar)) {
+            return mainJar
+        }
+
+        val libsFolder = projectHome.resolve(libsPath)
         if (! Files.exists(libsFolder)) {
-            gradleRunner.run(location, buildCommand)
+            gradleRunner.run(projectHome, buildCommand)
         }
 
         val matchingJars =
@@ -69,19 +86,12 @@ class ProjectRegistry(
                     it.filter({
                         val fileName = it.fileName.toString()
 
-                        fileName.startsWith(mainJarPrefix) &&
-                                fileName.endsWith(mainJarSuffix)
+                        fileName.startsWith(gradleMainJarPrefix) &&
+                                fileName.endsWith(gradleMainJarSuffix)
                     }).collect(Collectors.toList())
                 }
 
-        val jarPath = Iterables.getOnlyElement(matchingJars)
-
-        val freePort = SocketUtils.findAvailableTcpPort(minPort, maxPort)
-
-        val process = bootJarRunner.start(name, jarPath, freePort, location)
-
-        return ProjectInfo(
-                name, location, process)
+        return Iterables.getOnlyElement(matchingJars)
     }
 
 
