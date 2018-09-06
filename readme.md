@@ -6,7 +6,7 @@ Prerequisites:
 - Java 8
 
 Instructions:
-- Extract to local folder
+- Save local folder
 - Open in terminal
 - java -jar kzen-0.1.0.jar
 - wait to finish loading
