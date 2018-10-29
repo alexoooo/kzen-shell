@@ -3,16 +3,16 @@
 Download:
 - Windows zip: https://github.com/alexoooo/kzen-shell/releases/download/v0.2.0/kzen-0.2.0.zip
 - Linux tar.gz: https://github.com/alexoooo/kzen-shell/releases/download/v0.2.0/kzen-0.2.0.tar.gz
-- Standaline (requires Java 11): https://github.com/alexoooo/kzen-shell/releases/download/v0.2.0/kzen-0.2.0.jar
+- Java 11 jar: https://github.com/alexoooo/kzen-shell/releases/download/v0.2.0/kzen-0.2.0.jar
 
 Installing:
 - Download for your operating system
 - Extract somewhere
 
 Running:
-- Double-click kzen.bar or kzen.sh
+- Double-click to run kzen.bat (or kzen.sh on Linux)
 - Wait to load...
 - Browser will open at: http://localhost:8080
 
 Screenshot:
-![browser-automation-0 1 1](https://user-images.githubusercontent.com/4985552/45267733-8067e800-b440-11e8-9d6f-2ce1cbb83b61.png)
+![image](https://user-images.githubusercontent.com/4985552/47625654-ce25d600-dafc-11e8-80ac-f09cf75f198b.png)
