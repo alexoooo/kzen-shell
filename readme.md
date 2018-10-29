@@ -9,7 +9,7 @@ Installing:
 - Download for your operating system
 - Extract somewhere
 
-Running:
+Run:
 - Double-click (or otherwise run) kzen.bat (or kzen.sh on Linux)
 - Wait to load...
 - Browser will open at: http://localhost:8080
