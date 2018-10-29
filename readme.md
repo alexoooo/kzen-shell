@@ -14,5 +14,8 @@ Running:
 - Wait to load...
 - Browser will open at: http://localhost:8080
 
-Screenshot:
+# Screenshot
+See: https://github.com/alexoooo/kzen-shell/wiki/Screenshots
+
+Example:
 ![image](https://user-images.githubusercontent.com/4985552/47625654-ce25d600-dafc-11e8-80ac-f09cf75f198b.png)
