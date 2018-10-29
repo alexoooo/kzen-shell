@@ -5,7 +5,7 @@
 - Linux tar.gz: https://github.com/alexoooo/kzen-shell/releases/download/v0.2.0/kzen-0.2.0.tar.gz
 - Java 11 jar: https://github.com/alexoooo/kzen-shell/releases/download/v0.2.0/kzen-0.2.0.jar
 
-### Installing
+### Install
 - Download for your operating system
 - Extract somewhere
 
