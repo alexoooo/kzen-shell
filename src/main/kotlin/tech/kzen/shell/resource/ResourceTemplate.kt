@@ -2,7 +2,6 @@ package tech.kzen.shell.resource
 
 import com.google.common.io.MoreFiles
 import com.samskivert.mustache.Mustache
-import org.omg.CORBA.Object
 import tech.kzen.shell.model.ProjectModel
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets

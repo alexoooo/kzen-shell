@@ -54,7 +54,7 @@ class ProjectRegistry(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun start(name: String, location: Path): ProjectInfo {
-        return projects.get(name, { startImpl(name, location) })
+        return projects.get(name) { startImpl(name, location) }
     }
 
 
@@ -82,13 +82,13 @@ class ProjectRegistry(
         }
 
         val matchingJars =
-                Files.list(libsFolder).use {
-                    it.filter({
+                Files.list(libsFolder).use { fileList ->
+                    fileList.filter {
                         val fileName = it.fileName.toString()
 
                         fileName.startsWith(gradleMainJarPrefix) &&
                                 fileName.endsWith(gradleMainJarSuffix)
-                    }).collect(Collectors.toList())
+                    }.collect(Collectors.toList())
                 }
 
         return Iterables.getOnlyElement(matchingJars)
