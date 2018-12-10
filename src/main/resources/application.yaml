@@ -12,6 +12,7 @@ shell:
 #    path: ../work/kzen-launcher/kzen-launcher-jvm-0.3.0.jar
 #    download: https://github.com/alexoooo/kzen-launcher/releases/download/v0.0.1/server-0.0.1.jar
 #    download: file:///home/ao/proj/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.0.4.jar
-    download: file:///home/ao/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.3.0.jar
+#    download: file:///home/ao/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.3.0.jar
+    download: file:///C:/~/proj/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.3.0.jar
 #    download: https://github.com/alexoooo/kzen-launcher/releases/download/v0.0.6/kzen-launcher-jvm-0.0.6.jar
 #    download: https://github.com/alexoooo/kzen-launcher/releases/download/v0.0.6/kzen-launcher-jvm-0.3.0.jar

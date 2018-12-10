@@ -6,7 +6,10 @@ import org.springframework.stereotype.Component
 import org.springframework.util.SocketUtils
 import tech.kzen.shell.process.BootJarRunner
 import tech.kzen.shell.properties.ShellProperties
+import tech.kzen.shell.util.ProcessAwaitUtil
+import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URL
 import java.nio.file.Paths
 
 
@@ -24,8 +27,9 @@ class LauncherRunner(
 
         val freePort = SocketUtils.findAvailableTcpPort(49152, 65535)
 
-
         val name = path.fileName.toString()
         bootJarRunner.start(name, path, freePort)
+
+//        ProcessAwaitUtil.waitUntilAvailable(freePort)
     }
 }

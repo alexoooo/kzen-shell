@@ -1,6 +1,7 @@
 package tech.kzen.shell.process
 
 import tech.kzen.shell.registry.ProcessRegistry
+import tech.kzen.shell.util.ProcessAwaitUtil
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.TimeUnit
@@ -38,6 +39,8 @@ class BootJarProcess private constructor (
 
             val drain = startDrain(process)
 
+            ProcessAwaitUtil.waitUntilAvailable(port)
+
             return BootJarProcess(name, process, drain, processRegistry)
         }
 
@@ -69,7 +72,7 @@ class BootJarProcess private constructor (
 
 
         private fun startDrain(process: Process): Thread {
-            val drain = Thread({
+            val drain = Thread {
                 val reader = process.inputStream.bufferedReader()
 
                 while (true) {
@@ -78,7 +81,7 @@ class BootJarProcess private constructor (
 
                     println(">> $line")
                 }
-            })
+            }
 
             drain.start()
 

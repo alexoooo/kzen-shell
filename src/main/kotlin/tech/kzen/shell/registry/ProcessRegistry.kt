@@ -18,8 +18,8 @@ class ProcessRegistry {
             processBuilder: ProcessBuilder,
             attributes: Map<String, Any>
     ): Process {
-        check(! closed, {"already closed"})
-        check(! processes.containsKey(name), {"already started: $name"})
+        check(! closed) {"already closed"}
+        check(! processes.containsKey(name)) {"already started: $name"}
 
         val process = processBuilder.start()!!
 
