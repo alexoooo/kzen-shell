@@ -4,10 +4,11 @@ import java.awt.Component
 import java.awt.Font
 import javax.swing.*
 import javax.swing.JPanel
-import javax.swing.text.StyleConstants.setBackground
 import javax.swing.JTextPane
 import java.awt.Desktop
+import java.awt.Image
 import java.net.URI
+import javax.imageio.ImageIO
 
 
 object DesktopUi {
@@ -73,6 +74,13 @@ object DesktopUi {
         val pane = JPanel()
         pane.layout = BoxLayout(pane, BoxLayout.Y_AXIS)
 
+        val logo = JLabel(ImageIcon(logo()))
+        logo.alignmentX = Component.CENTER_ALIGNMENT
+        pane.add(JLabel(" "))
+        pane.add(logo)
+        pane.add(JLabel(" "))
+        pane.add(JLabel(" "))
+
         val label = JLabel("Ready:")
         label.font = Font(Font.SANS_SERIF, Font.BOLD, 32)
         label.alignmentX = Component.CENTER_ALIGNMENT
@@ -105,6 +113,13 @@ object DesktopUi {
         val pane = JPanel()
         pane.layout = BoxLayout(pane, BoxLayout.Y_AXIS)
 
+        val logo = JLabel(ImageIcon(logo()))
+        logo.alignmentX = Component.CENTER_ALIGNMENT
+        pane.add(JLabel(" "))
+        pane.add(logo)
+        pane.add(JLabel(" "))
+        pane.add(JLabel(" "))
+
         val label = JLabel("Loading...")
         label.font = Font(Font.SANS_SERIF, Font.BOLD, 32)
         label.alignmentX = Component.CENTER_ALIGNMENT
@@ -118,15 +133,20 @@ object DesktopUi {
     }
 
 
+    private fun logo(): Image {
+        return ImageIO
+                .read(javaClass.getResource("/logo.png"))
+                .getScaledInstance(72, 72, Image.SCALE_DEFAULT)
+    }
+
+
     private fun createAndShowUi(): JFrame {
-        //Create and set up the window.
         val frame = JFrame("$title - Loading...")
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
 
         val mainContainer = loadingPane()
         frame.contentPane = mainContainer
 
-        //Display the window.
         frame.pack()
         frame.setSize(600, 400)
 
