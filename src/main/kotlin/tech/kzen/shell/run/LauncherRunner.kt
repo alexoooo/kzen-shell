@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component
 import org.springframework.util.SocketUtils
 import tech.kzen.shell.process.BootJarRunner
 import tech.kzen.shell.properties.ShellProperties
+import tech.kzen.shell.ui.DesktopUi
 import tech.kzen.shell.util.ProcessAwaitUtil
 import java.net.HttpURLConnection
 import java.net.URI
@@ -30,6 +31,6 @@ class LauncherRunner(
         val name = path.fileName.toString()
         bootJarRunner.start(name, path, freePort)
 
-//        ProcessAwaitUtil.waitUntilAvailable(freePort)
+        DesktopUi.onLoaded()
     }
 }
