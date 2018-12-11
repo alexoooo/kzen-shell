@@ -71,7 +71,7 @@ class ProjectRegistry(
 
 
     private fun locateJar(projectHome: Path): Path {
-        val mainJar = projectHome.resolve("main.jar")
+        val mainJar = projectHome.resolve(mainJar)
         if (Files.exists(mainJar)) {
             return mainJar
         }

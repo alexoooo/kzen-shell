@@ -17,8 +17,22 @@ class GradleProcess private constructor (
 
 
         private fun startProcess(home: Path, command: String): Process {
+            val isWindows = System
+                    .getProperties()
+                    .getProperty("os.name")
+                    .toLowerCase()
+                    .contains("windows")
+
+            val gradleExecutable =
+                    if (isWindows) {
+                        "gradle.bat"
+                    }
+                    else {
+                        "./gradle"
+                    }
+
             return ProcessBuilder()
-                    .command("./gradlew", command)
+                    .command(gradleExecutable, command)
                     .directory(home.toFile())
                     .redirectErrorStream(true)
                     .start()!!
@@ -26,7 +40,7 @@ class GradleProcess private constructor (
 
 
         private fun startDrain(process: Process): Thread {
-            val drain = Thread({
+            val drain = Thread {
                 val reader = process.inputStream.bufferedReader()
 
                 while (true) {
@@ -35,7 +49,7 @@ class GradleProcess private constructor (
 
                     println(">> $line")
                 }
-            })
+            }
 
             drain.start()
 
