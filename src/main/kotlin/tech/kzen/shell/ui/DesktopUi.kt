@@ -148,7 +148,7 @@ object DesktopUi {
         frame.contentPane = mainContainer
 
         frame.pack()
-        frame.setSize(400, 400)
+        frame.setSize(450, 400)
 
         frame.setLocationRelativeTo(null)
         frame.isVisible = true
