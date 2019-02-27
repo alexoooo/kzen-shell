@@ -9,8 +9,7 @@ import reactor.core.publisher.Mono
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.properties.ShellProperties
 import tech.kzen.shell.registry.ProjectRegistry
-import java.io.IOException
-import java.io.InputStream
+import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
@@ -108,36 +107,40 @@ class ProxyHandler(
         val url = URL("http://localhost:$port/$subPath$querySuffix")
 
         // TODO: reactive download
-        var urlStream: InputStream? = null
-
         return try {
-            urlStream = url.openStream()
+            val connection = url.openConnection() as HttpURLConnection
 
-            val downloadBytes = ByteStreams.toByteArray(urlStream)
+            val acceptHeader = serverRequest.headers().accept().joinToString(", ") { it.type }
 
-            val responseBuilder = ServerResponse.ok()
+            connection.setRequestProperty("Accept", acceptHeader)
 
-            if (downloadBytes.isEmpty()) {
+            val isOk = connection.responseCode == HttpURLConnection.HTTP_OK
+
+            val responseStream =
+                    if (isOk) {
+                        connection.inputStream
+                    }
+                    else {
+                        connection.errorStream
+                    }
+
+            val responseBytes = responseStream.use {
+                ByteStreams.toByteArray(it)
+            }
+
+            val responseBuilder = ServerResponse.status(connection.responseCode)
+
+            if (responseBytes.isEmpty()) {
                 responseBuilder.build()
             }
             else {
-                responseBuilder.body(Mono.just(downloadBytes))
+                responseBuilder.body(Mono.just(responseBytes))
             }
         }
-        catch (e: IllegalStateException) {
+        catch (e: Exception) {
             ServerResponse
                     .badRequest()
                     .body(Mono.just(e.message ?: ""))
-        }
-        catch (e: IOException) {
-            ServerResponse
-                    .notFound()
-                    .build()
-        }
-        finally {
-            if (urlStream != null) {
-                urlStream.close()
-            }
         }
     }
 }
