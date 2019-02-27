@@ -73,7 +73,9 @@ class ProxyHandler(
                     .build()
         }
 
-        val name = excludingInitialSlash.substring(0, endOfName)
+        val encodedName = excludingInitialSlash.substring(0, endOfName)
+        val name = URI(encodedName).path
+
         val adjustedName =
                 if (name == "main") {
                     // TODO: centralize this logic
