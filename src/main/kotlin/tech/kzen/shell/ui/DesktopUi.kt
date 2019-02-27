@@ -98,7 +98,7 @@ object DesktopUi {
         pane.add(f)
 
         pane.add(doc("Note: this is not the main UI window,"))
-        pane.add(doc("  the UI should open on in a browser window on startup."))
+        pane.add(doc("  the UI should open in a browser tab on startup."))
         pane.add(doc("If you don't see the UI, try the button below,"))
         pane.add(doc("  or simply copy the above URL and paste in a browser."))
         pane.add(doc(" "))
@@ -143,7 +143,7 @@ object DesktopUi {
         pane.add(JLabel(" "))
         pane.add(doc("Note: some components may need to be downloaded."))
         pane.add(doc("  If your firewall asks for permission,"))
-        pane.add(doc("  please allow the connection."))
+        pane.add(doc("  please allow access."))
 
         return pane
     }
