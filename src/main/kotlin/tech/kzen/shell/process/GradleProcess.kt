@@ -31,8 +31,11 @@ class GradleProcess private constructor (
                         "./gradlew"
                     }
 
+            val javaHome = System.getProperty("java.home")
+            val gradleJavaHome = "-Dorg.gradle.java.home=$javaHome"
+
             return ProcessBuilder()
-                    .command(gradleExecutable, command)
+                    .command(gradleExecutable, gradleJavaHome, command)
                     .directory(home.toFile())
                     .redirectErrorStream(true)
                     .start()!!

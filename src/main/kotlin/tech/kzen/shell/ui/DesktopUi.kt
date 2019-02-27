@@ -88,7 +88,7 @@ object DesktopUi {
 
         val f = JTextPane()
         f.contentType = "text/html"
-        f.text = "<html><span style='font-size: 32px'>$location<span></html>"
+        f.text = "<html><div style='text-align: center;'><span style='font-size: 32px'>$location<span></div></html>"
         f.isEditable = false
         f.isOpaque = false
         f.border = null
@@ -96,6 +96,17 @@ object DesktopUi {
         f.setSize(f.width, 40)
         f.alignmentX = Component.CENTER_ALIGNMENT
         pane.add(f)
+
+        pane.add(doc("Note: this is not the main UI window,"))
+        pane.add(doc("  the UI should open on in a browser window on startup."))
+        pane.add(doc("If you don't see the UI, try the button below,"))
+        pane.add(doc("  or simply copy the above URL and paste in a browser."))
+        pane.add(doc(" "))
+        pane.add(doc("To exit the app, which will close all running projects,"))
+        pane.add(doc("  simply close this window."))
+        pane.add(doc("After exiting, the UI in the browser will not work"))
+        pane.add(doc("  until the app is started again."))
+        pane.add(doc(" "))
 
         val open = JButton("Open in browser")
         open.font = Font(Font.SANS_SERIF, Font.BOLD, 32)
@@ -129,8 +140,21 @@ object DesktopUi {
         progressBar.isIndeterminate = true
         pane.add(progressBar)
 
+        pane.add(JLabel(" "))
+        pane.add(doc("Note: some components may need to be downloaded."))
+        pane.add(doc("  If your firewall asks for permission,"))
+        pane.add(doc("  please allow the connection."))
+
         return pane
     }
+
+
+    private fun doc(text: String): JLabel {
+        val doc = JLabel(text)
+        doc.alignmentX = Component.CENTER_ALIGNMENT
+        return doc
+    }
+
 
 
     private fun logo(): Image {
@@ -148,7 +172,7 @@ object DesktopUi {
         frame.contentPane = mainContainer
 
         frame.pack()
-        frame.setSize(450, 400)
+        frame.setSize(650, 500)
 
         frame.setLocationRelativeTo(null)
         frame.isVisible = true
