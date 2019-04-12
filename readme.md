@@ -18,4 +18,4 @@
 See: https://github.com/alexoooo/kzen-shell/wiki/Screenshots
 
 Example:
-![image](https://user-images.githubusercontent.com/4985552/53576268-4949d800-3b41-11e9-87b3-5f7ac82a53a3.png)
+![image](https://user-images.githubusercontent.com/4985552/56004939-dda86e00-5c9b-11e9-9b4c-7fc41d0d8cb1.png)
