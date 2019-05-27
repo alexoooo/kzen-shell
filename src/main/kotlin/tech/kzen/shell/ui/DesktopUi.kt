@@ -1,14 +1,16 @@
 package tech.kzen.shell.ui
 
-import java.awt.Component
-import java.awt.Font
+import java.awt.*
 import javax.swing.*
 import javax.swing.JPanel
 import javax.swing.JTextPane
-import java.awt.Desktop
-import java.awt.Image
 import java.net.URI
 import javax.imageio.ImageIO
+import javax.swing.ImageIcon
+import java.awt.Image
+import java.awt.PopupMenu
+import java.awt.MenuItem
+import java.awt.event.*
 
 
 object DesktopUi {
@@ -16,8 +18,9 @@ object DesktopUi {
     private const val title = "Kzen"
     private const val location = "http://localhost:8080"
 
+    private var loaded: Boolean = false
+    private var hideWhenMinimized: Boolean = true
     private var lazyFrame: JFrame? = null
-
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -26,16 +29,19 @@ object DesktopUi {
             return
         }
 
-        javax.swing.SwingUtilities.invokeLater {
-            lazyFrame = createAndShowUi()}
+        SwingUtilities.invokeLater {
+            lazyFrame = createAndShowUi()
+            addToSystemTray(lazyFrame!!)
+        }
     }
 
 
     fun onLoaded() {
+        loaded = true
         val frame = lazyFrame
                 ?: return
 
-        javax.swing.SwingUtilities.invokeLater {
+        SwingUtilities.invokeLater {
             frame.title = title
             frame.contentPane = loadedPane()
             frame.revalidate()
@@ -97,6 +103,18 @@ object DesktopUi {
         f.alignmentX = Component.CENTER_ALIGNMENT
         pane.add(f)
 
+        pane.add(doc(" "))
+
+        val hideControl = JCheckBox("Hide when minimized")
+        hideControl.isSelected = hideWhenMinimized
+        hideControl.addItemListener {
+            hideWhenMinimized = (it.stateChange == ItemEvent.SELECTED)
+        }
+        pane.add(hideControl)
+        pane.add(doc("(When hidden, this window can be restored from the System Tray icon)"))
+
+        pane.add(doc(" "))
+
         pane.add(doc("Note: this is not the main UI window,"))
         pane.add(doc("  the UI should open in a browser tab on startup."))
         pane.add(doc("If you don't see the UI, try the button below,"))
@@ -115,6 +133,8 @@ object DesktopUi {
             openInBrowser()
         }
         pane.add(open)
+
+        pane.add(doc(" "))
 
         return pane
     }
@@ -166,17 +186,78 @@ object DesktopUi {
 
     private fun createAndShowUi(): JFrame {
         val frame = JFrame("$title - Loading...")
+
+        frame.addWindowListener(object: WindowAdapter() {
+            override fun windowIconified(e: WindowEvent?) {
+                if (loaded && hideWhenMinimized) {
+                    frame.isVisible = false
+                }
+            }
+        })
+
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
+
+        frame.iconImage = ImageIO.read(javaClass.getResource("/logo-black-on-half-white.png"))
 
         val mainContainer = loadingPane()
         frame.contentPane = mainContainer
 
         frame.pack()
-        frame.setSize(650, 500)
+        frame.setSize(650, 600)
 
         frame.setLocationRelativeTo(null)
         frame.isVisible = true
 
         return frame
+    }
+
+
+    private fun addToSystemTray(frame: JFrame) {
+        if (! SystemTray.isSupported()) {
+            return
+        }
+        val systemTray = SystemTray.getSystemTray()
+
+        val trayImage = ImageIO
+                .read(javaClass.getResource("/logo-black-on-half-white.png"))
+
+        val trayIcon = TrayIcon(trayImage,"Kzen")
+        val popup = PopupMenu()
+
+        val exitItem = MenuItem("Exit")
+        exitItem.addActionListener {
+            System.exit(0)
+        }
+
+        popup.add(exitItem)
+
+        trayIcon.popupMenu = popup
+        trayIcon.isImageAutoSize = true
+
+//        MenuSelectionManager.defaultManager().selectedPath = arrayOf(popup)
+        trayIcon.addMouseListener(object: MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent?) {
+                if (e?.button != MouseEvent.BUTTON1) {
+                    return
+                }
+
+                // see: https://stackoverflow.com/a/4005554/1941359
+                frame.isVisible = true
+                frame.state = JFrame.NORMAL
+
+                SwingUtilities.invokeLater {
+                    frame.toFront()
+//                    frame.repaint()
+                    frame.requestFocus()
+                }
+            }
+        })
+
+//        trayIcon.addActionListener {
+//            frame.toFront()
+//            frame.repaint()
+//        }
+
+        systemTray.add(trayIcon)
     }
 }
