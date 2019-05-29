@@ -30,7 +30,7 @@ class ProjectRegistry(
 
         const val mainJar = "main.jar"
         const val gradleMainJarPrefix = "kzen-project-jvm-"
-        const val gradleMainJarSuffix = ".jar"
+        const val gradleMainJarSuffix = "-boot.jar"
     }
 
 
