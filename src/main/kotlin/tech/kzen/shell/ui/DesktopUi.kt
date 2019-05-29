@@ -19,7 +19,7 @@ object DesktopUi {
     private const val location = "http://localhost:8080"
 
     private var loaded: Boolean = false
-    private var hideWhenMinimized: Boolean = true
+    private var hideWhenMinimized: Boolean = SystemTray.isSupported()
     private var lazyFrame: JFrame? = null
 
 
@@ -105,15 +105,17 @@ object DesktopUi {
 
         pane.add(doc(" "))
 
-        val hideControl = JCheckBox("Hide when minimized")
-        hideControl.isSelected = hideWhenMinimized
-        hideControl.addItemListener {
-            hideWhenMinimized = (it.stateChange == ItemEvent.SELECTED)
-        }
-        pane.add(hideControl)
-        pane.add(doc("(When hidden, this window can be restored from the System Tray icon)"))
+        if (SystemTray.isSupported()) {
+            val hideControl = JCheckBox("Hide when minimized")
+            hideControl.isSelected = hideWhenMinimized
+            hideControl.addItemListener {
+                hideWhenMinimized = (it.stateChange == ItemEvent.SELECTED)
+            }
+            pane.add(hideControl)
+            pane.add(doc("(When hidden, this window can be restored from the System Tray icon)"))
 
-        pane.add(doc(" "))
+            pane.add(doc(" "))
+        }
 
         pane.add(doc("Note: this is not the main UI window,"))
         pane.add(doc("  the UI should open in a browser tab on startup."))
@@ -174,7 +176,6 @@ object DesktopUi {
         doc.alignmentX = Component.CENTER_ALIGNMENT
         return doc
     }
-
 
 
     private fun logo(): Image {
