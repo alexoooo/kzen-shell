@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        springBootVersion = '2.1.5.RELEASE'
+        springBootVersion = '2.1.6.RELEASE'
     }
     repositories {
         mavenCentral()
@@ -13,7 +13,7 @@ buildscript {
 }
 
 group 'tech.kzen'
-version '0.7.1'
+version '0.8.0'
 
 
 apply plugin: 'kotlin'
@@ -34,9 +34,8 @@ dependencies {
 //    compile('org.springframework.boot:spring-boot-starter-web')
     compile('com.fasterxml.jackson.module:jackson-module-kotlin')
 
-    compile "com.google.guava:guava:27.1-jre"
-//    compile 'com.samskivert:jmustache:1.14'
-    compile 'io.github.microutils:kotlin-logging:1.6.26'
+    compile "com.google.guava:guava:$guavaVersion"
+    compile "io.github.microutils:kotlin-logging:$kotlinLogging"
 
     testCompile('org.springframework.boot:spring-boot-starter-test')
     testCompile('io.projectreactor:reactor-test')
