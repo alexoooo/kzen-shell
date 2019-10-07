@@ -11,6 +11,10 @@ import java.awt.Image
 import java.awt.PopupMenu
 import java.awt.MenuItem
 import java.awt.event.*
+import kotlin.system.exitProcess
+import javax.swing.UIManager
+
+
 
 
 object DesktopUi {
@@ -30,6 +34,7 @@ object DesktopUi {
         }
 
         SwingUtilities.invokeLater {
+            selectTheme()
             lazyFrame = createAndShowUi()
             addToSystemTray(lazyFrame!!)
         }
@@ -185,6 +190,16 @@ object DesktopUi {
     }
 
 
+    private fun selectTheme() {
+        for (info in UIManager.getInstalledLookAndFeels()) {
+            if ("Nimbus" == info.name) {
+                UIManager.setLookAndFeel(info.className)
+                break
+            }
+        }
+    }
+
+
     private fun createAndShowUi(): JFrame {
         val frame = JFrame("$title - Loading...")
 
@@ -227,7 +242,7 @@ object DesktopUi {
 
         val exitItem = MenuItem("Exit")
         exitItem.addActionListener {
-            System.exit(0)
+            exitProcess(0)
         }
 
         popup.add(exitItem)
