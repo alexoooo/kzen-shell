@@ -1,6 +1,7 @@
 package tech.kzen.shell.proxy
 
 import com.google.common.io.ByteStreams
+import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
@@ -11,7 +12,9 @@ import tech.kzen.shell.properties.ShellProperties
 import tech.kzen.shell.registry.ProjectRegistry
 import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URL
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Paths
 
 
@@ -95,7 +98,6 @@ class ProxyHandler(
         val info = processRegistry.get(adjustedName)
         val port = info.attributes["port"]
 
-
         val querySuffix =
                 if (serverRequest.queryParams().isEmpty()) {
                     ""
@@ -104,11 +106,30 @@ class ProxyHandler(
                     "?" + serverRequest.uri().rawQuery
                 }
 
-        val url = URL("http://localhost:$port/$subPath$querySuffix")
+        val uri = URI("http://localhost:$port/$subPath$querySuffix")
 
         // TODO: reactive download
+        return when (serverRequest.method()) {
+            HttpMethod.GET ->
+                proxyGet(serverRequest, uri)
+
+            HttpMethod.POST ->
+                proxyPost(serverRequest, uri)
+
+            else ->
+                ServerResponse
+                        .badRequest()
+                        .body(Mono.just("Unsupported method: ${serverRequest.methodName()}"))
+        }
+    }
+
+
+    private fun proxyGet(
+            serverRequest: ServerRequest,
+            uri: URI
+    ): Mono<ServerResponse> {
         return try {
-            val connection = url.openConnection() as HttpURLConnection
+            val connection = uri.toURL().openConnection() as HttpURLConnection
 
             val acceptHeader = serverRequest.headers().accept().joinToString(", ") { it.type }
 
@@ -135,6 +156,40 @@ class ProxyHandler(
             }
             else {
                 responseBuilder.body(Mono.just(responseBytes))
+            }
+        }
+        catch (e: Exception) {
+            ServerResponse
+                    .badRequest()
+                    .body(Mono.just(e.message ?: ""))
+        }
+    }
+
+
+    private fun proxyPost(
+            serverRequest: ServerRequest,
+            uri: URI
+    ): Mono<ServerResponse> {
+        return try {
+            val contents = serverRequest.bodyToMono(ByteArray::class.java)
+            contents.flatMap { body ->
+                val client = HttpClient.newHttpClient()
+
+                val request = HttpRequest.newBuilder(uri)
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                        .build()
+
+                val response = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+
+                val responseBuilder = ServerResponse.status(response.statusCode())
+
+                val responseBytes = response.body()
+                if (responseBytes.isEmpty()) {
+                    responseBuilder.build()
+                }
+                else {
+                    responseBuilder.body(Mono.just(responseBytes))
+                }
             }
         }
         catch (e: Exception) {
