@@ -25,7 +25,7 @@ class GradleProcess private constructor (
 
             val gradleExecutable =
                     if (isWindows) {
-                        "gradlew.bat"
+                        "${home}/gradlew.bat"
                     }
                     else {
                         "./gradlew"
