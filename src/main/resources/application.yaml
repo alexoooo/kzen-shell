@@ -6,7 +6,7 @@ spring.resources.static-locations:
 shell:
   main:
 #    path: ../work/kzen-launcher/kzen-launcher-jvm-0.10.0-SNAPSHOT.jar
-    path: ../work/kzen-launcher/kzen-launcher-jvm-0.10.0.jar
+    path: ../work/kzen-launcher/kzen-launcher-jvm-0.11.0.jar
 #    download: file:///home/ao/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.10.0-SNAPSHOT.jar
 #    download: file:///C:/Users/ao/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.10.0-SNAPSHOT.jar
-    download: https://github.com/alexoooo/kzen-launcher/releases/download/v0.10.0/kzen-launcher-jvm-0.10.0.jar
+    download: https://github.com/alexoooo/kzen-launcher/releases/download/v0.11.0/kzen-launcher-jvm-0.11.0.jar
