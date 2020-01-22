@@ -213,7 +213,8 @@ object DesktopUi {
 
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
 
-        frame.iconImage = ImageIO.read(javaClass.getResource("/logo-black-on-half-white.png"))
+        frame.iconImage = ImageIO.read(javaClass.getResource(
+                "/logo-black-on-half-white.png"))
 
         val mainContainer = loadingPane()
         frame.contentPane = mainContainer
