@@ -1,6 +1,4 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.springframework.boot.gradle.tasks.bundling.BootJar
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 
 plugins {
@@ -12,7 +10,7 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.14.0"
+version = "0.14.1"
 
 
 repositories {
