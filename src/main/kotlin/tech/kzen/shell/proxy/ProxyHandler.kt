@@ -7,8 +7,8 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
-import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.properties.ShellProperties
+import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.registry.ProjectRegistry
 import java.net.HttpURLConnection
 import java.net.URI

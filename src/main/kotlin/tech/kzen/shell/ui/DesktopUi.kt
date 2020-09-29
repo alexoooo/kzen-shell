@@ -1,20 +1,11 @@
 package tech.kzen.shell.ui
 
 import java.awt.*
-import javax.swing.*
-import javax.swing.JPanel
-import javax.swing.JTextPane
+import java.awt.event.*
 import java.net.URI
 import javax.imageio.ImageIO
-import javax.swing.ImageIcon
-import java.awt.Image
-import java.awt.PopupMenu
-import java.awt.MenuItem
-import java.awt.event.*
+import javax.swing.*
 import kotlin.system.exitProcess
-import javax.swing.UIManager
-
-
 
 
 object DesktopUi {

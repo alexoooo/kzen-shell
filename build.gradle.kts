@@ -10,7 +10,7 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.15.0"
+version = "0.16.0"
 
 
 repositories {
@@ -20,12 +20,9 @@ repositories {
 
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-
-//    compile('org.springframework.boot:spring-boot-starter-web')
 
     implementation("com.google.guava:guava:$guavaVersion")
     implementation("io.github.microutils:kotlin-logging:$kotlinLogging")
@@ -42,9 +39,6 @@ tasks {
             jvmTarget = jvmTargetVersion
         }
     }
-//    compileTestKotlin {
-//        kotlinOptions.jvmTarget = jvmTargetVersion
-//    }
 }
 
 

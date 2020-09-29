@@ -20,6 +20,7 @@ class DownloadService {
     //-----------------------------------------------------------------------------------------------------------------
     // TODO: implement proper certificate management
     @PostConstruct
+    @Suppress("unused")
     fun trustBadCertificate() {
         // https://stackoverflow.com/a/24501156
 

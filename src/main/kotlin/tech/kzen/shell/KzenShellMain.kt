@@ -8,10 +8,10 @@ import tech.kzen.shell.ui.DesktopUi
 
 @SpringBootApplication
 @EnableWebFlux
-class KzenShellApp
+class KzenShellMain
 
 
 fun main(args: Array<String>) {
     DesktopUi.show()
-    runApplication<KzenShellApp>(*args)
+    runApplication<KzenShellMain>(*args)
 }

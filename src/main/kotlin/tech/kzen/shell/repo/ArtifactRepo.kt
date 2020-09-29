@@ -1,6 +1,5 @@
 package tech.kzen.shell.repo
 
-import com.google.common.io.ByteStreams
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.net.URI
