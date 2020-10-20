@@ -8,6 +8,6 @@ const val dependencyManagementVersion = "1.0.9.RELEASE"
 
 const val coroutinesVersion = "1.3.9"
 
-const val guavaVersion = "29.0-jre"
+const val guavaVersion = "30.0-jre"
 
 const val kotlinLogging = "2.0.3"
