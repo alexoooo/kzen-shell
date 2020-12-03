@@ -1,9 +1,9 @@
 # kzen
 
 ### Download
-- Windows zip: https://github.com/alexoooo/kzen-shell/releases/download/v0.18.0/kzen-0.18.0.zip
-- Linux tar.gz: https://github.com/alexoooo/kzen-shell/releases/download/v0.18.0/kzen-0.18.0.tar.gz
-- Java 15 jar: https://github.com/alexoooo/kzen-shell/releases/download/v0.18.0/kzen-0.18.0.jar
+- Windows zip: https://github.com/alexoooo/kzen-shell/releases/download/v0.19.0/kzen-0.19.0.zip
+- Linux tar.gz: https://github.com/alexoooo/kzen-shell/releases/download/v0.19.0/kzen-0.19.0.tar.gz
+- Java 15 jar: https://github.com/alexoooo/kzen-shell/releases/download/v0.19.0/kzen-0.19.0.jar
 
 ### Install
 - Download for your operating system
@@ -18,4 +18,4 @@
 See: https://github.com/alexoooo/kzen-shell/wiki/Screenshots
 
 Example:
-![image](https://user-images.githubusercontent.com/4985552/63812482-89272780-c8f8-11e9-8f5d-5bd4c641186d.png)
+![image](https://user-images.githubusercontent.com/4985552/101042597-5cc27800-354b-11eb-85ff-5e002de103ba.png)
