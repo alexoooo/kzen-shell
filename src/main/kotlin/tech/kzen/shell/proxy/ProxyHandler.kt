@@ -1,6 +1,8 @@
 package tech.kzen.shell.proxy
 
 import com.google.common.io.ByteStreams
+import org.springframework.core.io.InputStreamResource
+import org.springframework.core.io.Resource
 import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -10,6 +12,7 @@ import reactor.core.publisher.Mono
 import tech.kzen.shell.properties.ShellProperties
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.registry.ProjectRegistry
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.http.HttpClient
@@ -137,7 +140,7 @@ class ProxyHandler(
 
             val isOk = connection.responseCode == HttpURLConnection.HTTP_OK
 
-            val responseStream =
+            val responseStream: InputStream =
                     if (isOk) {
                         connection.inputStream
                     }
@@ -145,17 +148,32 @@ class ProxyHandler(
                         connection.errorStream
                     }
 
-            val responseBytes = responseStream.use {
-                ByteStreams.toByteArray(it)
-            }
+            val responseBuilder = ServerResponse
+                .status(connection.responseCode)
 
-            val responseBuilder = ServerResponse.status(connection.responseCode)
-
-            if (responseBytes.isEmpty()) {
-                responseBuilder.build()
+            if (connection.contentLength == -1) {
+                val resource: Resource = InputStreamResource(responseStream)
+                for ((key, values) in connection.headerFields) {
+                    if (key != null) {
+                        for (value in values) {
+                            responseBuilder.header(key, value)
+                        }
+                    }
+                }
+                responseBuilder
+                    .body(Mono.just(resource))
             }
             else {
-                responseBuilder.body(Mono.just(responseBytes))
+                val responseBytes = responseStream.use {
+                    ByteStreams.toByteArray(it)
+                }
+
+                if (responseBytes.isEmpty()) {
+                    responseBuilder.build()
+                }
+                else {
+                    responseBuilder.body(Mono.just(responseBytes))
+                }
             }
         }
         catch (e: Exception) {
