@@ -10,7 +10,7 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.20.0"
+version = "0.21.0"
 
 
 repositories {
@@ -35,6 +35,7 @@ dependencies {
 tasks {
     compileKotlin {
         kotlinOptions {
+            useIR = true
             freeCompilerArgs = listOf("-Xjsr305=strict")
             jvmTarget = jvmTargetVersion
         }
