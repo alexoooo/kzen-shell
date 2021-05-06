@@ -10,7 +10,7 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.21.0"
+version = "0.22.0"
 
 
 repositories {
@@ -20,7 +20,8 @@ repositories {
 
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation(kotlin("reflect"))
+
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
@@ -35,7 +36,6 @@ dependencies {
 tasks {
     compileKotlin {
         kotlinOptions {
-            useIR = true
             freeCompilerArgs = listOf("-Xjsr305=strict")
             jvmTarget = jvmTargetVersion
         }
