@@ -1,9 +1,9 @@
 # kzen
 
 ### Download
-- Windows zip: https://github.com/alexoooo/kzen-shell/releases/download/v0.22.0/kzen-0.22.0.zip
-- Linux tar.gz: https://github.com/alexoooo/kzen-shell/releases/download/v0.22.0/kzen-0.22.0.tar.gz
-- Java 16 jar: https://github.com/alexoooo/kzen-shell/releases/download/v0.22.0/kzen-0.22.0.jar
+- Windows zip: https://github.com/alexoooo/kzen-shell/releases/download/v0.23.0/kzen-0.23.0.zip
+- Linux tar.gz: https://github.com/alexoooo/kzen-shell/releases/download/v0.23.0/kzen-0.23.0.tar.gz
+- Java 16 jar: https://github.com/alexoooo/kzen-shell/releases/download/v0.23.0/kzen-0.23.0.jar
 
 ### Install
 - Download for your operating system
