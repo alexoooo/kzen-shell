@@ -35,7 +35,9 @@ class ProxyHandler(
         val location = serverRequest.queryParam("location")
                 .orElseThrow { IllegalArgumentException("project location required") }
 
-        projectRegistry.start(name, Paths.get(location))
+        val jvmArgs = serverRequest.queryParam("args").orElse("")
+
+        projectRegistry.start(name, Paths.get(location), jvmArgs)
 
         return ServerResponse
                 .ok()

@@ -20,7 +20,7 @@ class GradleProcess private constructor (
             val isWindows = System
                     .getProperties()
                     .getProperty("os.name")
-                    .toLowerCase()
+                    .lowercase()
                     .contains("windows")
 
             val gradleExecutable =

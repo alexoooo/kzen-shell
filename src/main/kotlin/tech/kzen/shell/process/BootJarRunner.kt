@@ -12,10 +12,11 @@ class BootJarRunner(
     fun start(
             name: String,
             location: Path,
-            port: Int
+            port: Int,
+            jvmArgs: String
     ): BootJarProcess {
         return BootJarProcess.start(
-                name, location, port, processRegistry)
+                name, location, port, processRegistry, jvmArgs)
     }
 
 
@@ -23,9 +24,10 @@ class BootJarRunner(
             name: String,
             location: Path,
             port: Int,
-            home: Path
+            home: Path,
+            jvmArgs: String
     ): BootJarProcess {
         return BootJarProcess.start(
-                name, location, port, processRegistry, home)
+                name, location, port, processRegistry, home, jvmArgs)
     }
 }

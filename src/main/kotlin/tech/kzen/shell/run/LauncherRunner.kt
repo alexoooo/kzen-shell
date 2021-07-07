@@ -12,11 +12,12 @@ import java.net.URI
 import java.nio.file.Paths
 
 
+@Suppress("unused")
 @Component
 class LauncherRunner(
-        private val properties: ShellProperties,
-        private val artifactRepo: ArtifactRepo,
-        private val bootJarRunner: BootJarRunner
+    private val properties: ShellProperties,
+    private val artifactRepo: ArtifactRepo,
+    private val bootJarRunner: BootJarRunner
 ): ApplicationRunner {
     override fun run(args: ApplicationArguments?) {
         val path = Paths.get(properties.path!!)
@@ -27,7 +28,7 @@ class LauncherRunner(
         val freePort = SocketUtils.findAvailableTcpPort(49152, 65535)
 
         val name = path.fileName.toString()
-        bootJarRunner.start(name, path, freePort)
+        bootJarRunner.start(name, path, freePort, "-XX:+UseShenandoahGC -mx64m")
 
         DesktopUi.onLoaded()
     }

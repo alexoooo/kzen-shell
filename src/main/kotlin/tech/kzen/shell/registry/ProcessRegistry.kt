@@ -1,11 +1,18 @@
 package tech.kzen.shell.registry
 
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import javax.annotation.PreDestroy
 
 
 @Component
 class ProcessRegistry {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val logger = LoggerFactory.getLogger(ProcessRegistry::class.java)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val processes = mutableMapOf<String, Info>()
     private var closed = false
@@ -14,12 +21,17 @@ class ProcessRegistry {
     //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
     fun start(
-            name: String,
-            processBuilder: ProcessBuilder,
-            attributes: Map<String, Any>
+        name: String,
+        processBuilder: ProcessBuilder,
+        attributes: Map<String, Any>
     ): Process {
         check(! closed) {"already closed"}
         check(! processes.containsKey(name)) {"already started: $name"}
+
+        logger.info("Running process '{}': {} at {}",
+            name,
+            processBuilder.command(),
+            processBuilder.directory().toPath().toAbsolutePath().normalize())
 
         val process = processBuilder.start()!!
 
@@ -35,6 +47,7 @@ class ProcessRegistry {
     @Synchronized
     fun unregister(name: String) {
         processes.remove(name)
+        logger.info("Removed process '{}'", name)
     }
 
 
@@ -45,6 +58,7 @@ class ProcessRegistry {
                 ?: return
 
         processes.remove(entry.key)
+        logger.info("Removed process '{}'", entry.key)
     }
 
 

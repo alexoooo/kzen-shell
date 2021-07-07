@@ -26,21 +26,17 @@ class ArtifactRepo(
             return false
         }
 
-        val fileBytes =
-            if (download.scheme == "file") {
-                val sourcePath = Paths.get(download)
-                logger.info("reading from disk: {}", sourcePath)
+        if (download.scheme == "file") {
+            val sourcePath = Paths.get(download)
+            logger.info("reading from disk: {}", sourcePath)
 
-                Files.readAllBytes(sourcePath)
-            }
-            else {
-                ownloadService.download(download)
-            }
+            Files.createDirectories(path.parent)
+            Files.copy(sourcePath, path)
+        }
+        else {
+            ownloadService.download(download, path)
+        }
 
-        logger.info("done (size: {})", fileBytes.size)
-
-        Files.createDirectories(path.parent)
-        Files.write(path, fileBytes)
         return true
     }
 }

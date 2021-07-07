@@ -53,17 +53,17 @@ class ProjectRegistry(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun start(name: String, location: Path): ProjectInfo {
-        return projects.get(name) { startImpl(name, location) }
+    fun start(name: String, location: Path, jvmArgs: String): ProjectInfo {
+        return projects.get(name) { startImpl(name, location, jvmArgs) }
     }
 
 
-    private fun startImpl(name: String, projectHome: Path): ProjectInfo {
+    private fun startImpl(name: String, projectHome: Path, jvmArgs: String): ProjectInfo {
         val jarPath = locateJar(projectHome)
 
         val freePort = SocketUtils.findAvailableTcpPort(minPort, maxPort)
 
-        val process = bootJarRunner.start(name, jarPath, freePort, projectHome)
+        val process = bootJarRunner.start(name, jarPath, freePort, projectHome, jvmArgs)
 
         return ProjectInfo(
                 name, projectHome, process)

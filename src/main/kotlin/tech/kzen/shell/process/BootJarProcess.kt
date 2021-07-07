@@ -1,5 +1,6 @@
 package tech.kzen.shell.process
 
+import com.google.common.collect.ImmutableList
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.util.ProcessAwaitUtil
 import java.nio.file.Path
@@ -20,10 +21,11 @@ class BootJarProcess private constructor (
                 name: String,
                 location: Path,
                 port: Int,
-                processRegistry: ProcessRegistry
+                processRegistry: ProcessRegistry,
+                jvmArgs: String
         ): BootJarProcess {
             val home = location.parent
-            return start(name, location, port, processRegistry, home)
+            return start(name, location, port, processRegistry, home, jvmArgs)
         }
 
 
@@ -32,10 +34,11 @@ class BootJarProcess private constructor (
                 location: Path,
                 port: Int,
                 processRegistry: ProcessRegistry,
-                home: Path
+                home: Path,
+                jvmArgs: String
         ): BootJarProcess {
             val process = startProcess(
-                    name, home, location, port, processRegistry)
+                    name, home, location, port, processRegistry, jvmArgs)
 
             val drain = startDrain(process)
 
@@ -51,14 +54,29 @@ class BootJarProcess private constructor (
                 home: Path,
                 jar: Path,
                 port: Int,
-                processRegistry: ProcessRegistry
+                processRegistry: ProcessRegistry,
+                jvmArgs: String
         ): Process {
             val javaHome = System.getProperty("java.home")
             val javaBin =  "$javaHome/bin/java"
 
             val jarPath = jar.toAbsolutePath().toString()
+
+            val commandBuilder = ImmutableList.builder<String>()
+            commandBuilder.add(javaBin)
+
+            if (jvmArgs.isNotBlank()) {
+                val individualArgs =jvmArgs.trim().split(Regex("""\s+"""))
+                commandBuilder.addAll(individualArgs)
+            }
+
+            commandBuilder.add("-jar")
+            commandBuilder.add(jarPath)
+            commandBuilder.add("--server.port=$port")
+
+            val command = commandBuilder.build()
             val processSpec = ProcessBuilder()
-                    .command(javaBin, "-jar", jarPath, "--server.port=$port")
+                    .command(command)
                     .directory(home.toFile())
                     .redirectErrorStream(true)
 
