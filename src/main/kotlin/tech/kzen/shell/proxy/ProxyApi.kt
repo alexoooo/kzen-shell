@@ -16,6 +16,7 @@ class ProxyApi(
         GET("/shell/project/stop", proxyHandler::stop)
 
         GET("/**", proxyHandler::handle)
+        PUT("/**", proxyHandler::handle)
         POST("/**", proxyHandler::handle)
     }
 }

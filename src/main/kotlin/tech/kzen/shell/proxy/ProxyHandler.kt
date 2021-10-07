@@ -3,6 +3,7 @@ package tech.kzen.shell.proxy
 import com.google.common.io.ByteStreams
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -27,6 +28,13 @@ class ProxyHandler(
         private val processRegistry: ProcessRegistry,
         private val properties: ShellProperties
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val forwardHeaders = listOf(
+            HttpHeaders.CONTENT_TYPE)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun start(serverRequest: ServerRequest): Mono<ServerResponse> {
         val name = serverRequest.queryParam("name")
@@ -113,13 +121,15 @@ class ProxyHandler(
 
         val uri = URI("http://localhost:$port/$subPath$querySuffix")
 
-        // TODO: reactive download
         return when (serverRequest.method()) {
             HttpMethod.GET ->
                 proxyGet(serverRequest, uri)
 
             HttpMethod.POST ->
-                proxyPost(serverRequest, uri)
+                proxyPostOrPut(serverRequest, uri, true)
+
+            HttpMethod.PUT ->
+                proxyPostOrPut(serverRequest, uri, false)
 
             else ->
                 ServerResponse
@@ -186,19 +196,33 @@ class ProxyHandler(
     }
 
 
-    private fun proxyPost(
+    private fun proxyPostOrPut(
             serverRequest: ServerRequest,
-            uri: URI
+            uri: URI,
+            postOrPut: Boolean
     ): Mono<ServerResponse> {
         return try {
             val contents = serverRequest.bodyToMono(ByteArray::class.java)
+
             contents.flatMap { body ->
+                val builder = HttpRequest.newBuilder(uri)
+
+                val bodyPublisher = HttpRequest.BodyPublishers.ofByteArray(body)
+                if (postOrPut) {
+                    builder.POST(bodyPublisher)
+                }
+                else {
+                    builder.PUT(bodyPublisher)
+                }
+
+                for (forwardHeader in forwardHeaders) {
+                    val values = serverRequest.headers().header(forwardHeader)
+                    values.forEach { builder.setHeader(forwardHeader, it) }
+                }
+
+                val request = builder.build()
+
                 val client = HttpClient.newHttpClient()
-
-                val request = HttpRequest.newBuilder(uri)
-                        .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-                        .build()
-
                 val response = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
 
                 val responseBuilder = ServerResponse.status(response.statusCode())

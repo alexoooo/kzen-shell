@@ -10,12 +10,19 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.23.0"
+version = "0.24.0"
 
 
 repositories {
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
     mavenCentral()
+}
+
+
+kotlin {
+    jvmToolchain {
+        (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
+    }
 }
 
 
