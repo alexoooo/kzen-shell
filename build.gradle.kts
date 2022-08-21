@@ -10,12 +10,13 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.24.1"
+version = "0.25.0"
 
 
 repositories {
-    maven("https://dl.bintray.com/kotlin/kotlin-eap")
+//    maven("https://dl.bintray.com/kotlin/kotlin-eap")
     mavenCentral()
+    mavenLocal()
 }
 
 

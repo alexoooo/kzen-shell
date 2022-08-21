@@ -3,10 +3,10 @@ package tech.kzen.shell.registry
 import com.google.common.cache.CacheBuilder
 import com.google.common.collect.Iterables
 import org.springframework.stereotype.Component
-import org.springframework.util.SocketUtils
 import tech.kzen.shell.process.BootJarProcess
 import tech.kzen.shell.process.BootJarRunner
 import tech.kzen.shell.process.GradleRunner
+import tech.kzen.shell.util.FreePortUtil
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.stream.Collectors
@@ -19,11 +19,6 @@ class ProjectRegistry(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private companion object {
-        // Dynamic ports - https://en.wikipedia.org/wiki/Registered_port
-        const val minPort = 49152
-        const val maxPort = 65535
-
-
         const val buildCommand = "build"
 
         const val libsPath = "kzen-project-jvm/build/libs"
@@ -61,7 +56,7 @@ class ProjectRegistry(
     private fun startImpl(name: String, projectHome: Path, jvmArgs: String): ProjectInfo {
         val jarPath = locateJar(projectHome)
 
-        val freePort = SocketUtils.findAvailableTcpPort(minPort, maxPort)
+        val freePort = FreePortUtil.findAvailableTcpPort()
 
         val process = bootJarRunner.start(name, jarPath, freePort, projectHome, jvmArgs)
 
