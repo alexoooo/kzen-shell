@@ -2,7 +2,7 @@ package tech.kzen.shell.registry
 
 import com.google.common.cache.CacheBuilder
 import com.google.common.collect.Iterables
-import org.springframework.stereotype.Component
+//import org.springframework.stereotype.Component
 import tech.kzen.shell.process.BootJarProcess
 import tech.kzen.shell.process.BootJarRunner
 import tech.kzen.shell.process.GradleRunner
@@ -12,10 +12,10 @@ import java.nio.file.Path
 import java.util.stream.Collectors
 
 
-@Component
+//@Component
 class ProjectRegistry(
-        private val gradleRunner: GradleRunner,
-        private val bootJarRunner: BootJarRunner
+    private val gradleRunner: GradleRunner,
+    private val bootJarRunner: BootJarRunner
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private companion object {

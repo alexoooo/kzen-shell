@@ -1,11 +1,11 @@
 package tech.kzen.shell.registry
 
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
-import javax.annotation.PreDestroy
+//import org.springframework.stereotype.Component
+//import javax.annotation.PreDestroy
 
 
-@Component
+//@Component
 class ProcessRegistry {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -83,7 +83,7 @@ class ProcessRegistry {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @PreDestroy
+//    @PreDestroy
     @Synchronized
     fun close() {
         closed = true

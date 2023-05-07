@@ -1,11 +1,11 @@
-import org.springframework.boot.gradle.tasks.bundling.BootJar
+//import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 
 plugins {
     kotlin("jvm") version kotlinVersion
-    kotlin("plugin.spring") version kotlinVersion
-    id("org.springframework.boot") version springBootVersion
-    id("io.spring.dependency-management") version dependencyManagementVersion
+//    kotlin("plugin.spring") version kotlinVersion
+//    id("org.springframework.boot") version springBootVersion
+//    id("io.spring.dependency-management") version dependencyManagementVersion
 }
 
 
@@ -22,7 +22,7 @@ repositories {
 
 kotlin {
     jvmToolchain {
-        (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
+        languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
     }
 }
 
@@ -30,14 +30,20 @@ kotlin {
 dependencies {
     implementation(kotlin("reflect"))
 
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+//    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
 
     implementation("com.google.guava:guava:$guavaVersion")
     implementation("io.github.microutils:kotlin-logging:$kotlinLogging")
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("io.projectreactor:reactor-test")
+    implementation("io.ktor:ktor-server-netty:$ktorVersion")
+    implementation("io.ktor:ktor-server-html-builder-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
+//    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-jackson:$ktorVersion")
+
+//    testImplementation("org.springframework.boot:spring-boot-starter-test")
+//    testImplementation("io.projectreactor:reactor-test")
 }
 
 
@@ -51,6 +57,33 @@ tasks {
 }
 
 
-tasks.getByName<BootJar>("bootJar") {
-    archiveClassifier.set("boot")
+tasks.compileJava {
+    options.release.set(javaVersion)
+}
+
+//tasks.getByName<BootJar>("bootJar") {
+//    archiveClassifier.set("boot")
+//}
+
+
+val dependenciesDir = "dependencies"
+task("copyDependencies", Copy::class) {
+    from(configurations.default).into("$buildDir/libs/$dependenciesDir")
+}
+
+
+tasks.getByName<Jar>("jar") {
+    val jvmProject = project(":")
+    val copyDependenciesTask = jvmProject.tasks.getByName("copyDependencies") as Copy
+    dependsOn(copyDependenciesTask)
+
+    manifest {
+        attributes["Main-Class"] = "tech.kzen.shell.KzenShellMainKt"
+        attributes["Class-Path"] = configurations
+            .runtimeClasspath
+            .get()
+            .joinToString(separator = " ") { file ->
+                "$dependenciesDir/${file.name}"
+            }
+    }
 }

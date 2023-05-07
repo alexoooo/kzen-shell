@@ -66,7 +66,7 @@ class BootJarProcess private constructor (
             commandBuilder.add(javaBin)
 
             if (jvmArgs.isNotBlank()) {
-                val individualArgs =jvmArgs.trim().split(Regex("""\s+"""))
+                val individualArgs = jvmArgs.trim().split(Regex("""\s+"""))
                 commandBuilder.addAll(individualArgs)
             }
 
@@ -110,9 +110,9 @@ class BootJarProcess private constructor (
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun number() {
+//    fun number() {
 //        process.
-    }
+//    }
 
 
     fun kill(

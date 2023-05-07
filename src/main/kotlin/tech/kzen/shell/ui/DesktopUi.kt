@@ -11,11 +11,31 @@ import kotlin.system.exitProcess
 object DesktopUi {
     //-----------------------------------------------------------------------------------------------------------------
     private const val title = "Kzen"
-    private const val location = "http://localhost:8080"
+//    private const val location = "http://localhost:8080"
 
     private var loaded: Boolean = false
     private var hideWhenMinimized: Boolean = SystemTray.isSupported()
     private var lazyFrame: JFrame? = null
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private var port: Int = -1
+
+
+    fun setPort(port: Int) {
+        this.port = port
+    }
+
+
+    private fun port(): Int {
+        check(port != -1)
+        return port
+    }
+
+
+    private fun location(): URI {
+        return URI("http://localhost:${port()}")
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -62,7 +82,7 @@ object DesktopUi {
         }
 
         return try {
-            desktop.browse(URI(location))
+            desktop.browse(location())
             true
         }
         catch (e: Exception) {
@@ -88,9 +108,11 @@ object DesktopUi {
         label.alignmentX = Component.CENTER_ALIGNMENT
         pane.add(label)
 
+        val locationText = location().toString()
+
         val f = JTextPane()
         f.contentType = "text/html"
-        f.text = "<html><div style='text-align: center;'><span style='font-size: 32px'>$location<span></div></html>"
+        f.text = "<html><div style='text-align: center;'><span style='font-size: 32px'>$locationText<span></div></html>"
         f.isEditable = false
         f.isOpaque = false
         f.border = null
