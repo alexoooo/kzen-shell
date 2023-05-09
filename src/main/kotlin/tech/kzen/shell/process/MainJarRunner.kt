@@ -4,7 +4,7 @@ import tech.kzen.shell.registry.ProcessRegistry
 import java.nio.file.Path
 
 
-class BootJarRunner(
+class MainJarRunner(
     private val processRegistry: ProcessRegistry
 ) {
     fun start(
@@ -12,8 +12,8 @@ class BootJarRunner(
         location: Path,
         port: Int,
         jvmArgs: String
-    ): BootJarProcess {
-        return BootJarProcess.start(
+    ): MainJarProcess {
+        return MainJarProcess.start(
                 name, location, port, processRegistry, jvmArgs)
     }
 
@@ -24,8 +24,8 @@ class BootJarRunner(
         port: Int,
         home: Path,
         jvmArgs: String
-    ): BootJarProcess {
-        return BootJarProcess.start(
+    ): MainJarProcess {
+        return MainJarProcess.start(
                 name, location, port, processRegistry, home, jvmArgs)
     }
 }

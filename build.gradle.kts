@@ -10,7 +10,7 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.25.0"
+version = "0.26.0"
 
 
 repositories {
@@ -35,6 +35,7 @@ dependencies {
 
     implementation("com.google.guava:guava:$guavaVersion")
     implementation("io.github.microutils:kotlin-logging:$kotlinLogging")
+    implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-html-builder-jvm:$ktorVersion")

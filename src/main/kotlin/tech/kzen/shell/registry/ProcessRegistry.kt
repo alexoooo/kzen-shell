@@ -1,11 +1,8 @@
 package tech.kzen.shell.registry
 
 import org.slf4j.LoggerFactory
-//import org.springframework.stereotype.Component
-//import javax.annotation.PreDestroy
 
 
-//@Component
 class ProcessRegistry {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -25,8 +22,8 @@ class ProcessRegistry {
         processBuilder: ProcessBuilder,
         attributes: Map<String, Any>
     ): Process {
-        check(! closed) {"already closed"}
-        check(! processes.containsKey(name)) {"already started: $name"}
+        check(! closed) { "already closed" }
+        check(! processes.containsKey(name)) { "already started: $name" }
 
         logger.info("Running process '{}': {} at {}",
             name,

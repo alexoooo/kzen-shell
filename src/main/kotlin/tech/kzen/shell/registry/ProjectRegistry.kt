@@ -1,21 +1,17 @@
 package tech.kzen.shell.registry
 
 import com.google.common.cache.CacheBuilder
-import com.google.common.collect.Iterables
 //import org.springframework.stereotype.Component
-import tech.kzen.shell.process.BootJarProcess
-import tech.kzen.shell.process.BootJarRunner
-import tech.kzen.shell.process.GradleRunner
+import tech.kzen.shell.process.MainJarProcess
+import tech.kzen.shell.process.MainJarRunner
 import tech.kzen.shell.util.FreePortUtil
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.stream.Collectors
 
 
-//@Component
 class ProjectRegistry(
-    private val gradleRunner: GradleRunner,
-    private val bootJarRunner: BootJarRunner
+//    private val gradleRunner: GradleRunner,
+    private val mainJarRunner: MainJarRunner
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private companion object {
@@ -58,7 +54,7 @@ class ProjectRegistry(
 
         val freePort = FreePortUtil.findAvailableTcpPort()
 
-        val process = bootJarRunner.start(name, jarPath, freePort, projectHome, jvmArgs)
+        val process = mainJarRunner.start(name, jarPath, freePort, projectHome, jvmArgs)
 
         return ProjectInfo(
                 name, projectHome, process)
@@ -71,22 +67,24 @@ class ProjectRegistry(
             return mainJar
         }
 
-        val libsFolder = projectHome.resolve(libsPath)
-        if (! Files.exists(libsFolder)) {
-            gradleRunner.run(projectHome, buildCommand)
-        }
+        throw IllegalArgumentException("Not found: $mainJar")
 
-        val matchingJars =
-                Files.list(libsFolder).use { fileList ->
-                    fileList.filter {
-                        val fileName = it.fileName.toString()
-
-                        fileName.startsWith(gradleMainJarPrefix) &&
-                                fileName.endsWith(gradleMainJarSuffix)
-                    }.collect(Collectors.toList())
-                }
-
-        return Iterables.getOnlyElement(matchingJars)
+//        val libsFolder = projectHome.resolve(libsPath)
+//        if (! Files.exists(libsFolder)) {
+//            gradleRunner.run(projectHome, buildCommand)
+//        }
+//
+//        val matchingJars =
+//                Files.list(libsFolder).use { fileList ->
+//                    fileList.filter {
+//                        val fileName = it.fileName.toString()
+//
+//                        fileName.startsWith(gradleMainJarPrefix) &&
+//                                fileName.endsWith(gradleMainJarSuffix)
+//                    }.collect(Collectors.toList())
+//                }
+//
+//        return Iterables.getOnlyElement(matchingJars)
     }
 
 
@@ -106,5 +104,5 @@ class ProjectRegistry(
     data class ProjectInfo(
             val name: String,
             val location: Path,
-            val process: BootJarProcess)
+            val process: MainJarProcess)
 }

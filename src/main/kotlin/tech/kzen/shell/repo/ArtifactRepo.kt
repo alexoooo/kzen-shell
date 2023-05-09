@@ -86,7 +86,7 @@ class ArtifactRepo(
         zis.close()
     }
 
-    fun newFile(destinationDir: Path, zipEntry: ZipEntry): Path {
+    private fun newFile(destinationDir: Path, zipEntry: ZipEntry): Path {
         val destFile = Paths.get(destinationDir.toString(), zipEntry.name)
         val destDirPath = destinationDir.toFile().canonicalPath
         val destFilePath = destFile.toFile().canonicalPath

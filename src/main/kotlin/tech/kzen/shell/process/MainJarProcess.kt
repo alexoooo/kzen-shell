@@ -8,7 +8,7 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 
-class BootJarProcess private constructor (
+class MainJarProcess private constructor (
         val name: String,
         private val process: Process,
         private val drain: Thread,
@@ -23,7 +23,7 @@ class BootJarProcess private constructor (
                 port: Int,
                 processRegistry: ProcessRegistry,
                 jvmArgs: String
-        ): BootJarProcess {
+        ): MainJarProcess {
             val home = location.parent
             return start(name, location, port, processRegistry, home, jvmArgs)
         }
@@ -36,7 +36,7 @@ class BootJarProcess private constructor (
                 processRegistry: ProcessRegistry,
                 home: Path,
                 jvmArgs: String
-        ): BootJarProcess {
+        ): MainJarProcess {
             val process = startProcess(
                     name, home, location, port, processRegistry, jvmArgs)
 
@@ -44,7 +44,7 @@ class BootJarProcess private constructor (
 
             ProcessAwaitUtil.waitUntilAvailable(port)
 
-            return BootJarProcess(name, process, drain, processRegistry)
+            return MainJarProcess(name, process, drain, processRegistry)
         }
 
 
@@ -60,7 +60,7 @@ class BootJarProcess private constructor (
             val javaHome = System.getProperty("java.home")
             val javaBin =  "$javaHome/bin/java"
 
-            val jarPath = jar.toAbsolutePath().toString()
+            val jarPath = jar.toAbsolutePath().normalize().toString()
 
             val commandBuilder = ImmutableList.builder<String>()
             commandBuilder.add(javaBin)
@@ -116,8 +116,8 @@ class BootJarProcess private constructor (
 
 
     fun kill(
-            forceAfter: Duration =
-                    Duration.ofSeconds(15)
+        forceAfter: Duration =
+            Duration.ofSeconds(15)
     ) {
         process.destroy()
 

@@ -1,13 +1,15 @@
 package tech.kzen.shell.context
 
-import tech.kzen.shell.process.BootJarRunner
+import tech.kzen.shell.process.MainJarRunner
+import tech.kzen.shell.proxy.ProxyHandler
 import tech.kzen.shell.registry.ProcessRegistry
+import tech.kzen.shell.registry.ProjectRegistry
 import tech.kzen.shell.repo.ArtifactRepo
 import tech.kzen.shell.repo.DownloadService
-import tech.kzen.shell.ui.DesktopUi
 import tech.kzen.shell.util.FreePortUtil
 import java.net.URI
 import java.nio.file.Paths
+
 
 //---------------------------------------------------------------------------------------------------------------------
 class KzenShellContext(
@@ -19,7 +21,14 @@ class KzenShellContext(
     val artifactRepo = ArtifactRepo(downloadService)
 
     val processRegistry = ProcessRegistry()
-    val bootJarRunner = BootJarRunner(processRegistry)
+    val mainJarRunner = MainJarRunner(processRegistry)
+
+    val projectRegistry = ProjectRegistry(mainJarRunner)
+
+    val proxyHandler = ProxyHandler(
+        projectRegistry,
+        processRegistry,
+        properties)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -39,7 +48,7 @@ class KzenShellContext(
         val freePort = FreePortUtil.findAvailableTcpPort()
 
         val name = path.fileName.toString()
-        bootJarRunner.start(name, jarPath, freePort, "-XX:+UseShenandoahGC -mx64m")
+        mainJarRunner.start(name, jarPath, freePort, "-XX:+UseShenandoahGC -mx64m")
     }
 
 

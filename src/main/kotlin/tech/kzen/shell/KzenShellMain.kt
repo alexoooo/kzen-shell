@@ -1,5 +1,7 @@
 package tech.kzen.shell
 
+import com.google.common.io.ByteStreams
+import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -8,6 +10,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.pipeline.*
 import tech.kzen.shell.context.KzenShellContext
 import tech.kzen.shell.context.KzenShellProperties
 import tech.kzen.shell.ui.DesktopUi
@@ -38,8 +41,9 @@ fun kzenShellInit(args: Array<String>): KzenShellContext {
     DesktopUi.show()
 
     val properties = KzenShellProperties(
-        "../work/kzen-launcher/kzen-launcher-jvm-0.25.1/",
-        "file:///C:/Users/ao/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.25.1-SNAPSHOT.zip",
+        "../work/kzen-launcher/kzen-launcher-jvm-0.26.0/",
+//        "file:///C:/Users/ao/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.26.0-SNAPSHOT.zip",
+        "https://github.com/alexoooo/kzen-launcher/releases/download/v0.26.0/kzen-launcher-jvm-0.26.0.zip",
         port
     )
 
@@ -83,22 +87,53 @@ private fun Routing.routeRequests(
     }
 
     get("/shell/project") {
-        println("list")
+        val response = context.proxyHandler.list()
+        call.respond(response)
     }
     get("/shell/project/start") {
-        println("start")
+        context.proxyHandler.start(call.parameters)
+        call.respondText("started")
     }
     get("/shell/project/stop") {
-        println("stop")
+        val response = context.proxyHandler.stop(call.parameters)
+        call.respond(response)
     }
 
     get("{...}") {
-        println("get " + call.request.path())
+        routeProxy(context)
     }
     put("{...}") {
-        println("put " + call.request.path())
+        routeProxy(context)
     }
     post("{...}") {
-        println("post " + call.request.path())
+        routeProxy(context)
+    }
+    get("{...}/") {
+        routeProxy(context)
+    }
+}
+
+
+private suspend fun PipelineContext<Unit, ApplicationCall>.routeProxy(
+    context: KzenShellContext
+) {
+    val result = context.proxyHandler.handle(call.request)
+
+    for (e in result.header) {
+        if (HttpHeaders.isUnsafe(e.key)) {
+            continue
+        }
+        if (call.response.headers[e.key] != e.value) {
+            call.response.header(e.key, e.value)
+        }
+    }
+
+    call.respondOutputStream(
+        result.mimeType?.let { ContentType.parse(it) },
+        result.statusCode?.let { HttpStatusCode.fromValue(it) }
+    ) {
+        result.data?.use {
+            ByteStreams.copy(it, this)
+        }
     }
 }
