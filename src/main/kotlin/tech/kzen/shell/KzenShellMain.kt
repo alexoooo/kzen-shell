@@ -41,9 +41,9 @@ fun kzenShellInit(args: Array<String>): KzenShellContext {
     DesktopUi.show()
 
     val properties = KzenShellProperties(
-        "../work/kzen-launcher/kzen-launcher-jvm-0.27.0/",
-        "file:///C:/Users/ao/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.27.0-SNAPSHOT.zip",
-//        "https://github.com/alexoooo/kzen-launcher/releases/download/v0.26.0/kzen-launcher-jvm-0.26.0.zip",
+        "../work/kzen-launcher/kzen-launcher-0.27.0/",
+//        "file:///C:/Users/ostro/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-jvm-0.27.0.zip",
+        "https://github.com/alexoooo/kzen-launcher/releases/download/v0.27.0/kzen-launcher-0.27.0.zip",
         port
     )
 

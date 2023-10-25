@@ -3,18 +3,14 @@
 
 plugins {
     kotlin("jvm") version kotlinVersion
-//    kotlin("plugin.spring") version kotlinVersion
-//    id("org.springframework.boot") version springBootVersion
-//    id("io.spring.dependency-management") version dependencyManagementVersion
 }
 
 
 group = "tech.kzen"
-version = "0.26.1"
+version = "0.27.0"
 
 
 repositories {
-//    maven("https://dl.bintray.com/kotlin/kotlin-eap")
     mavenCentral()
     mavenLocal()
 }
@@ -30,7 +26,6 @@ kotlin {
 dependencies {
     implementation(kotlin("reflect"))
 
-//    implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
 
     implementation("com.google.guava:guava:$guavaVersion")
@@ -42,9 +37,6 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
 //    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("io.ktor:ktor-serialization-jackson:$ktorVersion")
-
-//    testImplementation("org.springframework.boot:spring-boot-starter-test")
-//    testImplementation("io.projectreactor:reactor-test")
 }
 
 
@@ -62,14 +54,10 @@ tasks.compileJava {
     options.release.set(javaVersion)
 }
 
-//tasks.getByName<BootJar>("bootJar") {
-//    archiveClassifier.set("boot")
-//}
-
 
 val dependenciesDir = "dependencies"
 task("copyDependencies", Copy::class) {
-    from(configurations.default).into("$buildDir/libs/$dependenciesDir")
+    from(configurations.runtimeClasspath).into("$buildDir/libs/$dependenciesDir")
 }
 
 
