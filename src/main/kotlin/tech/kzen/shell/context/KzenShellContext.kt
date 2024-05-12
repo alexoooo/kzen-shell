@@ -48,7 +48,7 @@ class KzenShellContext(
         val freePort = FreePortUtil.findAvailableTcpPort()
 
         val name = path.fileName.toString()
-        mainJarRunner.start(name, jarPath, freePort, "-XX:+UseShenandoahGC -mx64m")
+        mainJarRunner.start(name, jarPath, freePort, "-mx64m")
     }
 
 

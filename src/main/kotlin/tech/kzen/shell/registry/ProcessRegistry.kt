@@ -51,11 +51,11 @@ class ProcessRegistry {
     @Synchronized
     fun unregister(process: Process) {
         val entry =
-                processes.entries.find { it.value.process == process }
-                ?: return
+            processes.entries.find { it.value.process == process }
+            ?: return
 
         processes.remove(entry.key)
-        logger.info("Removed process '{}'", entry.key)
+        logger.info("Removed process named '{}'", entry.key)
     }
 
 
@@ -69,7 +69,7 @@ class ProcessRegistry {
     @Synchronized
     fun get(name: String): Info {
         return processes[name]
-                ?: throw IllegalArgumentException("Unknown project: $name")
+            ?: throw IllegalArgumentException("Unknown project: $name")
     }
 
 
@@ -93,7 +93,7 @@ class ProcessRegistry {
 
     //-----------------------------------------------------------------------------------------------------------------
     data class Info(
-            val name: String,
-            val process: Process,
-            val attributes: Map<String, Any>)
+        val name: String,
+        val process: Process,
+        val attributes: Map<String, Any>)
 }

@@ -1,12 +1,13 @@
 package tech.kzen.shell.util
 
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 
 
 object ProcessAwaitUtil {
     fun isAvailable(portNumber: Int): Boolean {
-        val rootUrl = URL("http://localhost:$portNumber/")
+        val rootUrl = URI("http://localhost:$portNumber/").toURL()
 
         return try {
             val huc = rootUrl.openConnection() as HttpURLConnection

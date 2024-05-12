@@ -19,7 +19,7 @@ class DownloadService {
 
     //-----------------------------------------------------------------------------------------------------------------
     // TODO: implement proper certificate management
-    @Suppress("unused")
+//    @Suppress("unused")
     fun trustBadCertificate() {
         // https://stackoverflow.com/a/24501156
 
@@ -43,7 +43,7 @@ class DownloadService {
     fun download(location: URI, destination: Path) {
         Files.createDirectories(destination.parent)
 
-        logger.info("downloading: {}", location)
+        logger.info("downloading: {} to {}", location, destination)
 
         val bytes = BufferedOutputStream(
             Files.newOutputStream(destination)
