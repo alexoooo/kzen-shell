@@ -2,7 +2,6 @@ package tech.kzen.shell.util
 
 import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URL
 
 
 object ProcessAwaitUtil {

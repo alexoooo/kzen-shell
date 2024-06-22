@@ -79,7 +79,10 @@ class ProxyHandler(
             request.path().substring(1)
 
         val endOfName = excludingInitialSlash.indexOf("/")
-        require(endOfName != -1) { "Path required: ${request.path()}" }
+        if (endOfName == -1) {
+            // sub-path required, direct resources not allowed
+            return ProxyResult(statusCode = 404)
+        }
 
         val encodedName = excludingInitialSlash.substring(0, endOfName)
         val name = URI(encodedName).path

@@ -7,7 +7,6 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
@@ -41,9 +40,9 @@ fun kzenShellInit(args: Array<String>): KzenShellContext {
     DesktopUi.show()
 
     val properties = KzenShellProperties(
-        "../work/kzen-launcher/kzen-launcher-0.28.0/",
-        "file:///C:/Users/ostro/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-0.28.0.zip",
-//        "https://github.com/alexoooo/kzen-launcher/releases/download/v0.28.0/kzen-launcher-0.28.0.zip",
+        "../work/kzen-launcher/kzen-launcher-0.28.1/",
+//        "file:///C:/Users/ostro/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-0.28.0.zip",
+        "https://github.com/alexoooo/kzen-launcher/releases/download/v0.28.1/kzen-launcher-0.28.1.zip",
         port
     )
 

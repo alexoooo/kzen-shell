@@ -1,4 +1,4 @@
-//import org.springframework.boot.gradle.tasks.bundling.BootJar
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 
 plugins {
@@ -7,7 +7,7 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.28.0"
+version = "0.28.1"
 
 
 repositories {
@@ -19,6 +19,9 @@ repositories {
 kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
+    }
+    compilerOptions {
+        jvmTarget.set(JvmTarget.fromTarget(jvmTargetVersion))
     }
 }
 
@@ -40,14 +43,19 @@ dependencies {
 }
 
 
-tasks {
-    compileKotlin {
-        kotlinOptions {
-            freeCompilerArgs = listOf("-Xjsr305=strict")
-            jvmTarget = jvmTargetVersion
-        }
-    }
-}
+//tasks {
+//    compileKotlin {
+//        kotlinOptions {
+//            freeCompilerArgs = listOf("-Xjsr305=strict")
+//            jvmTarget = jvmTargetVersion
+//        }
+//    }
+//}
+//tasks.named("compileKotlin", org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask::class.java) {
+//    compilerOptions {
+//        freeCompilerArgs = listOf("-Xjsr305=strict")
+//    }
+//}
 
 
 tasks.compileJava {
