@@ -1,8 +1,8 @@
 # kzen
 
 ### Download
-- Windows zip: https://github.com/alexoooo/kzen-shell/releases/download/v0.28.0/kzen-0.28.0.zip
-- Java 21 jar: https://github.com/alexoooo/kzen-shell/releases/download/v0.28.0/kzen-0.28.0-jars.zip
+- Windows zip: https://github.com/alexoooo/kzen-shell/releases/download/v0.28.1/kzen-0.28.1.zip
+- Java 21 jar: https://github.com/alexoooo/kzen-shell/releases/download/v0.28.1/kzen-0.28.1-jars.zip
 
 ### Install
 - Download for your operating system
