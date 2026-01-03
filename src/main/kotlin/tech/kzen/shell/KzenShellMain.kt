@@ -40,9 +40,10 @@ fun kzenShellInit(args: Array<String>): KzenShellContext {
     DesktopUi.show()
 
     val properties = KzenShellProperties(
-        "../work/kzen-launcher/kzen-launcher-0.28.1/",
-//        "file:///C:/Users/ostro/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-0.28.0.zip",
-        "https://github.com/alexoooo/kzen-launcher/releases/download/v0.28.1/kzen-launcher-0.28.1.zip",
+//        "../work/kzen-launcher/kzen-launcher-0.28.1/",
+        "../work/kzen-launcher/kzen-launcher-0.29.0/",
+        "file:///C:/Users/ostro/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-0.29.0.zip",
+//        "https://github.com/alexoooo/kzen-launcher/releases/download/v0.28.1/kzen-launcher-0.28.1.zip",
         port
     )
 
@@ -113,7 +114,7 @@ private fun Routing.routeRequests(
 }
 
 
-private suspend fun PipelineContext<Unit, ApplicationCall>.routeProxy(
+private suspend fun RoutingContext.routeProxy(
     context: KzenShellContext
 ) {
     val result = context.proxyHandler.handle(call.request)

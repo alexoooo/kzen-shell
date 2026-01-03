@@ -7,7 +7,7 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.28.1"
+version = "0.29.0"
 
 
 repositories {
@@ -29,7 +29,7 @@ kotlin {
 dependencies {
     implementation(kotlin("reflect"))
 
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
+    implementation("tools.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
 
     implementation("com.google.guava:guava:$guavaVersion")
     implementation("io.github.microutils:kotlin-logging:$kotlinLogging")
@@ -64,8 +64,10 @@ tasks.compileJava {
 
 
 val dependenciesDir = "dependencies"
-task("copyDependencies", Copy::class) {
-    from(configurations.runtimeClasspath).into("$buildDir/libs/$dependenciesDir")
+tasks.register<Copy>("copyDependencies") {
+    from(configurations.runtimeClasspath)
+//        .into("$buildDir/libs/$dependenciesDir")
+        .into(layout.buildDirectory.dir("libs/$dependenciesDir"))
 }
 
 
