@@ -32,7 +32,6 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
 
     implementation("com.google.guava:guava:$guavaVersion")
-    implementation("io.github.microutils:kotlin-logging:$kotlinLogging")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
