@@ -289,7 +289,7 @@ class ProxyHandler(
         parser: (String) -> T
     ): T {
         val queryParamValues: List<String>? = getAll(parameterName)
-        require(! queryParamValues.isNullOrEmpty()) { "'$parameterName' required" }
+        require(!queryParamValues.isNullOrEmpty()) { "'$parameterName' required" }
         require(queryParamValues.size == 1) { "Single '$parameterName' expected: $queryParamValues" }
         return parser(queryParamValues.single())
     }

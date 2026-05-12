@@ -22,8 +22,8 @@ class ProcessRegistry {
         processBuilder: ProcessBuilder,
         attributes: Map<String, Any>
     ): Process {
-        check(! closed) { "already closed" }
-        check(! processes.containsKey(name)) { "already started: $name" }
+        check(!closed) { "already closed" }
+        check(!processes.containsKey(name)) { "already started: $name" }
 
         logger.info("Running process '{}': {} at {}",
             name,

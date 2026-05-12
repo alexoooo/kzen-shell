@@ -77,7 +77,7 @@ object DesktopUi {
                     return false
                 }
 
-        if (! desktop.isSupported(Desktop.Action.BROWSE)) {
+        if (!desktop.isSupported(Desktop.Action.BROWSE)) {
             return false
         }
 
@@ -243,7 +243,7 @@ object DesktopUi {
 
 
     private fun addToSystemTray(frame: JFrame) {
-        if (! SystemTray.isSupported()) {
+        if (!SystemTray.isSupported()) {
             return
         }
         val systemTray = SystemTray.getSystemTray()

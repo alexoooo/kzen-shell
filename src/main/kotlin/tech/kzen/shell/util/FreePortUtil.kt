@@ -28,7 +28,7 @@ object FreePortUtil {
             candidatePort = nextRandomPort()
             searchCounter++
         }
-        while (! isPortAvailable(candidatePort))
+        while (!isPortAvailable(candidatePort))
 
         return candidatePort
     }

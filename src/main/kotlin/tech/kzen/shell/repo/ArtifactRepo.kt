@@ -57,14 +57,14 @@ class ArtifactRepo(
         while (zipEntry != null) {
             val newFile = newFile(outputDir, zipEntry)
             if (zipEntry.isDirectory) {
-                if (! Files.isDirectory(newFile)) {
+                if (!Files.isDirectory(newFile)) {
                     Files.createDirectories(newFile)
                 }
             }
             else {
                 // fix for Windows-created archives
                 val parent = newFile.parent
-                if (! Files.isDirectory(parent)) {
+                if (!Files.isDirectory(parent)) {
                     Files.createDirectories(parent)
                 }
 
@@ -87,7 +87,7 @@ class ArtifactRepo(
         val destFile = Paths.get(destinationDir.toString(), zipEntry.name)
         val destDirPath = destinationDir.toFile().canonicalPath
         val destFilePath = destFile.toFile().canonicalPath
-        if (! destFilePath.startsWith(destDirPath + File.separator)) {
+        if (!destFilePath.startsWith(destDirPath + File.separator)) {
             throw IOException("Entry is outside of the target dir: " + zipEntry.name)
         }
         return destFile

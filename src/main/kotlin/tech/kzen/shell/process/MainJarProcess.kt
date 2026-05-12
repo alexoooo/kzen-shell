@@ -123,7 +123,7 @@ class MainJarProcess private constructor (
 
         val exited = process.waitFor(forceAfter.toMillis(), TimeUnit.MILLISECONDS)
 
-        if (! exited) {
+        if (!exited) {
             process.destroyForcibly()
         }
 
