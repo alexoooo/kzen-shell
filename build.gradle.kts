@@ -63,17 +63,14 @@ tasks.compileJava {
 
 
 val dependenciesDir = "dependencies"
-tasks.register<Copy>("copyDependencies") {
+val copyDependencies by tasks.registering(Copy::class) {
     from(configurations.runtimeClasspath)
-//        .into("$buildDir/libs/$dependenciesDir")
         .into(layout.buildDirectory.dir("libs/$dependenciesDir"))
 }
 
 
-tasks.getByName<Jar>("jar") {
-    val jvmProject = project(":")
-    val copyDependenciesTask = jvmProject.tasks.getByName("copyDependencies") as Copy
-    dependsOn(copyDependenciesTask)
+tasks.named<Jar>("jar") {
+    dependsOn(copyDependencies)
 
     manifest {
         attributes["Main-Class"] = "tech.kzen.shell.KzenShellMainKt"
