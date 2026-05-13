@@ -9,7 +9,6 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.util.pipeline.*
 import tech.kzen.shell.context.KzenShellContext
 import tech.kzen.shell.context.KzenShellProperties
 import tech.kzen.shell.ui.DesktopUi
