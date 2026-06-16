@@ -3,6 +3,7 @@ package tech.kzen.shell.process
 import com.google.common.collect.ImmutableList
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.util.ProcessAwaitUtil
+import java.io.IOException
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.TimeUnit
@@ -74,6 +75,12 @@ class MainJarProcess private constructor (
             commandBuilder.add(jarPath)
             commandBuilder.add("--server.port=$port")
 
+            // Bind the child's lifetime to ours: it self-reaps on stdin EOF (our death closes the
+            //  inherited pipe on every OS) plus a parent-pid backup. See KzenAutoMain /
+            //  KzenLauncherMain (the launcher and project mains that honour these flags).
+            commandBuilder.add("--managed.lifeline=stdin")
+            commandBuilder.add("--parent.pid=${ProcessHandle.current().pid()}")
+
             val command = commandBuilder.build()
             val processSpec = ProcessBuilder()
                 .command(command)
@@ -119,15 +126,39 @@ class MainJarProcess private constructor (
         forceAfter: Duration =
             Duration.ofSeconds(15)
     ) {
-        process.destroy()
+        // Graceful first: signal via the stdin lifeline so the child self-exits cleanly and frees
+        //  its port. OS-agnostic — works even on Windows where process.destroy() == TerminateProcess
+        //  (a hookless hard kill).
+        signalShutdown()
 
         val exited = process.waitFor(forceAfter.toMillis(), TimeUnit.MILLISECONDS)
 
         if (!exited) {
-            process.destroyForcibly()
+            process.destroy()
+            if (!process.waitFor(forceAfter.toMillis(), TimeUnit.MILLISECONDS)) {
+                process.destroyForcibly()
+            }
         }
 
         await()
+    }
+
+
+    private fun signalShutdown() {
+        // Best-effort: a child that already exited gives a broken pipe — fine. Send the "SHUTDOWN"
+        //  sentinel AND close stdin so the child sees a sentinel line and/or EOF.
+        val childStdin = process.outputStream
+        try {
+            childStdin.write("SHUTDOWN\n".toByteArray(Charsets.UTF_8))
+            childStdin.flush()
+        }
+        catch (ignored: IOException) {
+        }
+        try {
+            childStdin.close()
+        }
+        catch (ignored: IOException) {
+        }
     }
 
 
