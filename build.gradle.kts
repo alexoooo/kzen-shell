@@ -63,7 +63,7 @@ tasks.compileJava {
 
 
 val dependenciesDir = "dependencies"
-val copyDependencies by tasks.registering(Copy::class) {
+val copyDependencies = tasks.register<Copy>("copyDependencies") {
     from(configurations.runtimeClasspath)
         .into(layout.buildDirectory.dir("libs/$dependenciesDir"))
 }
