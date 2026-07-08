@@ -85,3 +85,15 @@ tasks.named<Jar>("jar") {
             }
     }
 }
+
+
+// Distribution zip: the shell jar (keeps its name — end users run `java -jar kzen-shell-<v>.jar`)
+//  + dependencies/. Launcher scripts (kzen.bat/kzen.sh) and offline launcher-seeding are Phase 4.
+tasks.register<Zip>("dist") {
+    dependsOn("jar", "copyDependencies")
+    archiveFileName.set("kzen-$version.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("dist"))
+
+    from(tasks.named("jar"))
+    from(layout.buildDirectory.dir("libs/$dependenciesDir")) { into(dependenciesDir) }
+}

@@ -31,18 +31,11 @@ fun main(args: Array<String>) {
 
 //---------------------------------------------------------------------------------------------------------------------
 fun kzenShellInit(args: Array<String>): KzenShellContext {
-    val port = KzenShellProperties.readPort(args) ?: 8080
-    DesktopUi.setPort(port)
+    // Launcher + project-archetype sources resolve via --args > kzen-shell.properties > GitHub default.
+    val properties = KzenShellProperties.load(args)
 
+    DesktopUi.setPort(properties.port)
     DesktopUi.show()
-
-    val properties = KzenShellProperties(
-//        "../work/kzen-launcher/kzen-launcher-0.28.1/",
-        "../work/kzen-launcher/kzen-launcher-0.29.1-SNAPSHOT/",
-        "file:///C:/Users/ostro/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-0.29.1-SNAPSHOT.zip",
-//        "https://github.com/alexoooo/kzen-launcher/releases/download/v0.28.1/kzen-launcher-0.28.1.zip",
-        port
-    )
 
     val context = KzenShellContext(properties)
 
