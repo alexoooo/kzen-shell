@@ -23,8 +23,8 @@ There's no dev-mode `BackendDevelopment`/`FrontendDevelopment` pair — kzen-she
 ```powershell
 ./gradlew build
 java -jar build/libs/kzen-shell-0.29.1-SNAPSHOT.jar
-# Use the JDK 25 toolchain explicitly if PATH java is older:
-& "C:/Users/ostro/.jdks/temurin-25.0.3/bin/java" -jar build/libs/kzen-shell-0.29.1-SNAPSHOT.jar
+# Use the JDK 26 toolchain explicitly if PATH java is older (the jar is now class-file v70):
+& "C:/Users/ostro/.jdks/temurin-26.0.1/bin/java" -jar build/libs/kzen-shell-0.29.1-SNAPSHOT.jar
 ```
 
 End-user packaging (the `kzen-<v>.zip` distribution on GitHub releases) is hand-built, not produced by Gradle.
