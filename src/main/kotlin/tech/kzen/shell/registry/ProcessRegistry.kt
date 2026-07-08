@@ -75,8 +75,14 @@ class ProcessRegistry {
 
 
     @Synchronized
-    fun findByAttribute(attribute: String, target: Any): Info {
-        return processes.values.find { it.attributes[attribute] == target }!!
+    fun getOrNull(name: String): Info? {
+        return processes[name]
+    }
+
+
+    @Synchronized
+    fun findByAttribute(attribute: String, target: Any): Info? {
+        return processes.values.find { it.attributes[attribute] == target }
     }
 
 

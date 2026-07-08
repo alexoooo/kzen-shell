@@ -1,38 +1,81 @@
 package tech.kzen.shell.proxy
 
+import io.ktor.client.*
+import io.ktor.client.network.sockets.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.content.*
+import io.ktor.server.application.*
 import io.ktor.server.request.*
-import io.ktor.utils.io.jvm.javaio.*
-//import org.springframework.core.io.InputStreamResource
-//import org.springframework.core.io.Resource
-//import org.springframework.http.HttpHeaders
-//import org.springframework.http.HttpMethod
-//import org.springframework.stereotype.Component
-//import org.springframework.web.reactive.function.server.ServerRequest
-//import org.springframework.web.reactive.function.server.ServerResponse
-//import org.springframework.web.reactive.function.server.body
-//import reactor.core.publisher.Mono
+import io.ktor.server.response.*
+import io.ktor.utils.io.*
+import org.slf4j.LoggerFactory
 import tech.kzen.shell.context.KzenShellProperties
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.registry.ProjectRegistry
-import java.io.InputStream
-import java.net.HttpURLConnection
+import tools.jackson.databind.json.JsonMapper
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketException
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.file.Paths
 
 
 class ProxyHandler(
         private val projectRegistry: ProjectRegistry,
         private val processRegistry: ProcessRegistry,
-        private val properties: KzenShellProperties
+        private val properties: KzenShellProperties,
+        private val httpClient: HttpClient
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val forwardHeaders = listOf(
-            HttpHeaders.ContentType)
+        private val logger = LoggerFactory.getLogger(ProxyHandler::class.java)
+
+        private val errorMapper: JsonMapper = JsonMapper.builder().build()
+
+        // Hop-by-hop headers (RFC 7230 §6.1) plus Host/Content-Length, matched case-insensitively.
+        // Content-Type/Content-Length/Transfer-Encoding are handled via the request body (OutgoingContent)
+        //  and the response framing, never copied as plain headers.
+        private val hopByHopHeaders: Set<String> = setOf(
+            HttpHeaders.Connection,
+            HttpHeaders.TransferEncoding,
+            HttpHeaders.Upgrade,
+            "Keep-Alive",
+            "Proxy-Connection",
+            HttpHeaders.Host,
+            HttpHeaders.ContentLength
+        ).mapTo(HashSet()) { it.lowercase() }
+
+
+        private fun isHopByHop(name: String): Boolean {
+            val lower = name.lowercase()
+            return lower in hopByHopHeaders || lower.startsWith("proxy-")
+        }
+
+
+        // Request direction: also drop Content-Type (carried by the OutgoingContent body).
+        private fun forwardRequestHeader(name: String): Boolean =
+            ! isHopByHop(name) && ! name.equals(HttpHeaders.ContentType, ignoreCase = true)
+
+
+        // Response direction: also drop Ktor's engine-managed "unsafe" set (Content-Type/Length/TE).
+        private fun forwardResponseHeader(name: String): Boolean =
+            ! isHopByHop(name) && ! HttpHeaders.isUnsafe(name)
+
+
+        private fun isConnectivityFailure(error: Throwable): Boolean {
+            var cursor: Throwable? = error
+            while (cursor != null) {
+                if (cursor is ConnectException ||
+                        cursor is SocketException ||
+                        cursor is ConnectTimeoutException) {
+                    return true
+                }
+                cursor = cursor.cause
+            }
+            return false
+        }
     }
 
 
@@ -44,236 +87,172 @@ class ProxyHandler(
         val jvmArgs = parameters.getParamOrNull("args") ?: ""
 
         projectRegistry.start(name, Paths.get(location), jvmArgs)
-
-//        return ServerResponse
-//                .ok()
-//                .body(Mono.just("started"))
     }
 
 
     fun stop(parameters: Parameters): Boolean {
         val projectName = parameters.getParam("name")
         return projectRegistry.stop(projectName)
-
-//        return ServerResponse
-//                .ok()
-//                .body(Mono.just(stopped.toString()))
     }
 
 
     fun list(): List<String> {
         return projectRegistry.list().toList()
-//        val quoted = projectRegistry.list().map { "\"$it\"" }
-//        val delimited = quoted.joinToString()
-//        val list = "[$delimited]"
-//
-//        return ServerResponse
-//                .ok()
-//                .body(Mono.just(list))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun handle(request: ApplicationRequest): ProxyResult {
+    suspend fun handle(call: ApplicationCall) {
         val excludingInitialSlash =
-            request.path().substring(1)
+            call.request.path().substring(1)
 
         val endOfName = excludingInitialSlash.indexOf("/")
         if (endOfName == -1) {
             // sub-path required, direct resources not allowed
-            return ProxyResult(statusCode = 404)
+            call.respond(HttpStatusCode.NotFound)
+            return
         }
 
         val encodedName = excludingInitialSlash.substring(0, endOfName)
         val name = URI(encodedName).path
 
-        val adjustedName =
-            if (name == "main") {
-                // TODO: centralize this logic
-                val fullPath = Paths
-                    .get(properties.path!!)
-                    .resolve("main.jar")
-                    .toAbsolutePath()
-                    .normalize()
-                    .toString()
+        val info: ProcessRegistry.Info
+        if (name == "main") {
+            // TODO: centralize this logic
+            val fullPath = Paths
+                .get(properties.path!!)
+                .resolve("main.jar")
+                .toAbsolutePath()
+                .normalize()
+                .toString()
 
-                val mainInfo = processRegistry.findByAttribute("location", fullPath)
-
-                mainInfo.name
+            val mainInfo = processRegistry.findByAttribute("location", fullPath)
+            if (mainInfo == null) {
+                logger.warn("'main' alias unresolved (launcher not registered) for {}", fullPath)
+                respondProxyError(call, HttpStatusCode.ServiceUnavailable, "process-unavailable", "main")
+                return
             }
-            else {
-                name
+            info = mainInfo
+        }
+        else {
+            val namedInfo = processRegistry.getOrNull(name)
+            if (namedInfo == null) {
+                logger.warn("Proxy target not registered: {}", name)
+                call.respond(HttpStatusCode.NotFound)
+                return
             }
+            info = namedInfo
+        }
 
+        val port = info.attributes["port"]
         val subPath = excludingInitialSlash.substring(endOfName + 1)
 
-        val info = processRegistry.get(adjustedName)
-        val port = info.attributes["port"]
-
         val querySuffix =
-            if (request.queryParameters.isEmpty()) {
+            if (call.request.queryParameters.isEmpty()) {
                 ""
             }
             else {
-                "?" + URI(request.uri).rawQuery
+                "?" + URI(call.request.uri).rawQuery
             }
 
-        val uri = URI("http://localhost:$port/$subPath$querySuffix")
+        val targetUrl = "http://localhost:$port/$subPath$querySuffix"
 
-        return when (request.httpMethod) {
-            HttpMethod.Get ->
-                proxyGet(request, uri)
+        val requestContentLength = call.request.contentLength()
+        val hasBody =
+            (requestContentLength != null && requestContentLength > 0) ||
+            call.request.headers[HttpHeaders.TransferEncoding] != null
 
-            HttpMethod.Post ->
-                proxyPostOrPut(request, uri, true)
-
-            HttpMethod.Put ->
-                proxyPostOrPut(request, uri, false)
-
-            else ->
-                ProxyResult(
-                    statusCode = HttpStatusCode.BadRequest.value,
-                    mimeType = ContentType.Text.Plain.contentType,
-                    data = "Unsupported method: ${request.httpMethod}".byteInputStream())
-        }
-    }
-
-
-    private fun proxyGet(
-        request: ApplicationRequest,
-        uri: URI
-    ): ProxyResult {
-        return try {
-            val connection = uri.toURL().openConnection() as HttpURLConnection
-
-            val acceptHeader = request.headers.getAll("Accept")?.joinToString(", ") ?: ""
-//            val acceptHeader = serverRequest.headers().accept().joinToString(", ") { it.type }
-
-            connection.setRequestProperty("Accept", acceptHeader)
-
-            val isOk = connection.responseCode == HttpURLConnection.HTTP_OK
-
-            val responseStream: InputStream =
-                    if (isOk) {
-                        connection.inputStream
-                    }
-                    else {
-                        connection.errorStream
-                    }
-
-            val headerMap = mutableMapOf<String, String>()
-            for ((key, values) in connection.headerFields) {
-                if (key != null) {
-                    for (value in values) {
-                        headerMap[key] = value
-//                            responseBuilder.header(key, value)
+        try {
+            httpClient
+                .prepareRequest(targetUrl) {
+                    method = call.request.httpMethod
+                    forwardRequestHeaders(call, this)
+                    if (hasBody) {
+                        setBody(ForwardedRequestBody(
+                            call.receiveChannel(),
+                            call.request.contentType(),
+                            requestContentLength))
                     }
                 }
-            }
+                .execute { upstream ->
+                    forwardResponseHeaders(upstream, call)
 
-//            if (connection.contentLength == -1) {
-//                val resource: Resource = InputStreamResource(responseStream)
-//                responseBuilder
-//                    .body(Mono.just(resource))
-//            }
-//            else {
-//                val responseBytes = responseStream.use {
-//                    ByteStreams.toByteArray(it)
-//                }
-//
-//                if (responseBytes.isEmpty()) {
-//                    responseBuilder.build()
-//                }
-//                else {
-//                    responseBuilder.body(Mono.just(responseBytes))
-//                }
-//            }
-
-            ProxyResult(
-                statusCode = connection.responseCode,
-                mimeType = connection.contentType,
-                data = responseStream,
-                header = headerMap
-            )
-        }
-        catch (e: Exception) {
-//            ServerResponse
-//                    .badRequest()
-//                    .body(Mono.just(e.message ?: ""))
-            ProxyResult(
-                statusCode = HttpStatusCode.BadRequest.value,
-                mimeType = ContentType.Text.Plain.contentType,
-                data = (e.message ?: "").byteInputStream())
-        }
-    }
-
-
-    private fun headerMap(connection: HttpURLConnection): Map<String, String> {
-        val headerMap = mutableMapOf<String, String>()
-        for ((key, values) in connection.headerFields) {
-            if (key != null) {
-                for (value in values) {
-                    headerMap[key] = value
-//                            responseBuilder.header(key, value)
+                    try {
+                        call.respondBytesWriter(
+                            contentType = upstream.contentType(),
+                            status = upstream.status,
+                            contentLength = upstream.contentLength()
+                        ) {
+                            upstream.bodyAsChannel().copyTo(this)
+                        }
+                    }
+                    catch (e: IOException) {
+                        // Status + headers are already committed; we cannot switch to an error page.
+                        //  Abort the stream and log — nothing else can be done.
+                        logger.warn("Proxy stream to '{}' interrupted after response was committed", info.name, e)
+                    }
                 }
-            }
         }
-        return headerMap
-    }
-
-
-    private fun proxyPostOrPut(
-        request: ApplicationRequest,
-        uri: URI,
-        postOrPut: Boolean
-    ): ProxyResult {
-        return try {
-            val builder = HttpRequest.newBuilder(uri)
-
-            val body = request.receiveChannel()
-            val bodyPublisher = HttpRequest.BodyPublishers.ofInputStream{ body.toInputStream() }
-            if (postOrPut) {
-                builder.POST(bodyPublisher)
+        catch (e: IOException) {
+            // Failure before the response was committed (connect, request send, or reading status/headers).
+            if (isConnectivityFailure(e)) {
+                logger.warn("Upstream '{}' unavailable", info.name, e)
+                respondProxyError(call, HttpStatusCode.ServiceUnavailable, "process-unavailable", info.name)
             }
             else {
-                builder.PUT(bodyPublisher)
+                logger.warn("Proxy failure to '{}'", info.name, e)
+                respondProxyError(call, HttpStatusCode.BadGateway, "proxy-failure", info.name)
             }
-
-            for (forwardHeader in forwardHeaders) {
-                val values = request.headers.getAll(forwardHeader)
-                values?.forEach { builder.setHeader(forwardHeader, it) }
-            }
-
-            val httpRequest = builder.build()
-            val client = HttpClient.newHttpClient()
-            val response = client.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream())
-
-            val headerMap = mutableMapOf<String, String>()
-            for ((key, values) in response.headers().map()) {
-                if (key != null) {
-                    for (value in values) {
-                        headerMap[key] = value
-                    }
-                }
-            }
-
-            val mimeType = response.headers().firstValue(HttpHeaders.ContentType).orElse(null)
-
-            ProxyResult(
-                statusCode = response.statusCode(),
-                mimeType = mimeType,
-                data = response.body(),
-                header = headerMap
-            )
-        }
-        catch (e: Exception) {
-            ProxyResult(
-                statusCode = HttpStatusCode.BadRequest.value,
-                mimeType = ContentType.Text.Plain.contentType,
-                data = (e.message ?: "").byteInputStream())
         }
     }
 
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun forwardRequestHeaders(call: ApplicationCall, builder: HttpRequestBuilder) {
+        builder.headers {
+            for ((headerName, values) in call.request.headers.entries()) {
+                if (! forwardRequestHeader(headerName)) {
+                    continue
+                }
+                for (value in values) {
+                    append(headerName, value)
+                }
+            }
+        }
+    }
+
+
+    private fun forwardResponseHeaders(upstream: HttpResponse, call: ApplicationCall) {
+        for ((headerName, values) in upstream.headers.entries()) {
+            if (! forwardResponseHeader(headerName)) {
+                continue
+            }
+            for (value in values) {
+                call.response.headers.append(headerName, value, safeOnly = false)
+            }
+        }
+    }
+
+
+    private suspend fun respondProxyError(
+        call: ApplicationCall,
+        status: HttpStatusCode,
+        error: String,
+        name: String
+    ) {
+        val body = errorMapper.writeValueAsString(mapOf("error" to error, "name" to name))
+        call.respondText(body, ContentType.Application.Json, status)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private class ForwardedRequestBody(
+        private val channel: ByteReadChannel,
+        override val contentType: ContentType?,
+        override val contentLength: Long?
+    ) : OutgoingContent.ReadChannelContent() {
+        override fun readFrom(): ByteReadChannel = channel
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

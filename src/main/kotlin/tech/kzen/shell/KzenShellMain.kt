@@ -1,7 +1,5 @@
 package tech.kzen.shell
 
-import com.google.common.io.ByteStreams
-import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -65,6 +63,7 @@ fun kzenShellStarted() {
 fun Application.ktorMain(
     context: KzenShellContext
 ) {
+    install(IgnoreTrailingSlash)
     install(ContentNegotiation) {
         jackson()
     }
@@ -98,41 +97,9 @@ private fun Routing.routeRequests(
         call.respond(response)
     }
 
-    get("{...}") {
-        routeProxy(context)
-    }
-    put("{...}") {
-        routeProxy(context)
-    }
-    post("{...}") {
-        routeProxy(context)
-    }
-    get("{...}/") {
-        routeProxy(context)
-    }
-}
-
-
-private suspend fun RoutingContext.routeProxy(
-    context: KzenShellContext
-) {
-    val result = context.proxyHandler.handle(call.request)
-
-    for (e in result.header) {
-        if (HttpHeaders.isUnsafe(e.key)) {
-            continue
-        }
-        if (call.response.headers[e.key] != e.value) {
-            call.response.header(e.key, e.value)
-        }
-    }
-
-    call.respondOutputStream(
-        result.mimeType?.let { ContentType.parse(it) },
-        result.statusCode?.let { HttpStatusCode.fromValue(it) }
-    ) {
-        result.data?.use {
-            ByteStreams.copy(it, this)
+    route("{...}") {
+        handle {
+            context.proxyHandler.handle(call)
         }
     }
 }

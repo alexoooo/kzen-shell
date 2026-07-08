@@ -1,5 +1,7 @@
 package tech.kzen.shell.context
 
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
 import tech.kzen.shell.process.MainJarRunner
 import tech.kzen.shell.proxy.ProxyHandler
 import tech.kzen.shell.registry.ProcessRegistry
@@ -25,10 +27,16 @@ class KzenShellContext(
 
     val projectRegistry = ProjectRegistry(mainJarRunner)
 
+    val httpClient = HttpClient(CIO) {
+        followRedirects = false
+        expectSuccess = false
+    }
+
     val proxyHandler = ProxyHandler(
         projectRegistry,
         processRegistry,
-        properties)
+        properties,
+        httpClient)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -53,6 +61,7 @@ class KzenShellContext(
 
 
     fun close() {
+        httpClient.close()
         processRegistry.close()
     }
 }
