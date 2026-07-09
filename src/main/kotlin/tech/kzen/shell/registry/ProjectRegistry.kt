@@ -9,6 +9,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
 
 
 // Tracks user-launched projects and their lifecycle state (starting -> running -> stopping, or
@@ -38,11 +39,13 @@ class ProjectRegistry(
 
     // Mutable per-project record. `state` and `process` are guarded by the entry's monitor for the
     //  start/stop hand-off (a stop arriving mid-boot must be observed by the start task, and vice
-    //  versa); other reads (list()) tolerate a slightly-stale snapshot.
+    //  versa); other reads (list()) tolerate a slightly-stale snapshot. `sequence` is a monotonic
+    //  start ordinal used to render list() newest-first (a just-started project appears at the top).
     private class Entry(
         val name: String,
         val location: Path,
-        val jvmArgs: String
+        val jvmArgs: String,
+        val sequence: Long
     ) {
         var state: ProjectState = ProjectState.STARTING
         var process: MainJarProcess? = null
@@ -51,6 +54,8 @@ class ProjectRegistry(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val entries = ConcurrentHashMap<String, Entry>()
+
+    private val sequenceCounter = AtomicLong()
 
     private val executor = Executors.newCachedThreadPool { runnable ->
         Thread(runnable, "kzen-project-lifecycle").apply { isDaemon = true }
@@ -63,8 +68,13 @@ class ProjectRegistry(
     }
 
 
+    // Newest-first: the most recently started project is index 0, so the launcher renders it at the
+    //  top of Running Projects. A FAILED->restart gets a fresh (higher) sequence and jumps to the top;
+    //  a STARTING->RUNNING transition keeps the same Entry, so a running project holds its position.
     fun list(): List<RunningProjectStatus> {
-        return entries.values.map { RunningProjectStatus(it.name, it.state.wire) }
+        return entries.values
+            .sortedByDescending { it.sequence }
+            .map { RunningProjectStatus(it.name, it.state.wire) }
     }
 
 
@@ -79,7 +89,7 @@ class ProjectRegistry(
                 existing
             }
             else {
-                val fresh = Entry(name, location, jvmArgs)
+                val fresh = Entry(name, location, jvmArgs, sequenceCounter.incrementAndGet())
                 created = fresh
                 fresh
             }
