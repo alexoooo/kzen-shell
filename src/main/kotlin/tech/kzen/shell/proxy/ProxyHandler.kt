@@ -12,6 +12,7 @@ import io.ktor.server.response.*
 import io.ktor.utils.io.*
 import org.slf4j.LoggerFactory
 import tech.kzen.shell.context.KzenShellProperties
+import tech.kzen.shell.model.RunningProjectStatus
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.registry.ProjectRegistry
 import tools.jackson.databind.json.JsonMapper
@@ -96,8 +97,8 @@ class ProxyHandler(
     }
 
 
-    fun list(): List<String> {
-        return projectRegistry.list().toList()
+    fun list(): List<RunningProjectStatus> {
+        return projectRegistry.list()
     }
 
 

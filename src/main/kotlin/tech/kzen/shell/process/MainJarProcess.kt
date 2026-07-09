@@ -17,6 +17,11 @@ class MainJarProcess private constructor (
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        // Backstop for a child that spawns but never serves HTTP (hang / mis-config). Child crashes are
+        //  detected sooner via process liveness; this only bounds the pathological alive-but-silent case.
+        private val readinessTimeout: Duration = Duration.ofSeconds(120)
+
+
         //-------------------------------------------------
         fun start(
             name: String,
@@ -43,9 +48,17 @@ class MainJarProcess private constructor (
 
             val drain = startDrain(process)
 
-            ProcessAwaitUtil.waitUntilAvailable(port)
+            val mainJarProcess = MainJarProcess(name, process, drain, processRegistry)
 
-            return MainJarProcess(name, process, drain, processRegistry)
+            val ready = ProcessAwaitUtil.awaitAvailable(port, process, readinessTimeout)
+            if (! ready) {
+                // Child died or never came up: reap it (also unregisters from processRegistry) and fail,
+                //  so ProjectRegistry marks the project FAILED rather than leaving it stuck STARTING.
+                mainJarProcess.kill()
+                throw IllegalStateException("Project '$name' did not become available on port $port")
+            }
+
+            return mainJarProcess
         }
 
 

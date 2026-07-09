@@ -62,6 +62,7 @@ class KzenShellContext(
 
     fun close() {
         httpClient.close()
+        projectRegistry.close()
         processRegistry.close()
     }
 }
