@@ -1,4 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 
 plugins {
@@ -62,6 +65,35 @@ dependencies {
 
 tasks.compileJava {
     options.release.set(javaVersion)
+}
+
+
+// Build stamp: version + build timestamp baked into the jar at /kzen-shell-build.properties, loaded at
+// startup by BuildInfo and logged so the running shell binary is identifiable (no UI to hover).
+// Deliberately never up-to-date so every build re-stamps the moment of build.
+val buildInfoDir = layout.buildDirectory.dir("generated-resources")
+val generateBuildInfo = tasks.register("generateBuildInfo") {
+    val buildInfoFile = buildInfoDir.map { it.file("kzen-shell-build.properties") }
+    val buildVersion = version.toString()
+    outputs.file(buildInfoFile)
+    outputs.upToDateWhen { false }
+    doLast {
+        val timestamp = OffsetDateTime.now()
+            .truncatedTo(ChronoUnit.SECONDS)
+            .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        buildInfoFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText("version=$buildVersion\ntimestamp=$timestamp\n")
+        }
+    }
+}
+
+sourceSets.main {
+    resources.srcDir(buildInfoDir)
+}
+
+tasks.withType<ProcessResources> {
+    dependsOn(generateBuildInfo)
 }
 
 

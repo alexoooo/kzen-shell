@@ -7,12 +7,16 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.slf4j.LoggerFactory
 import tech.kzen.shell.context.KzenShellContext
 import tech.kzen.shell.context.KzenShellProperties
 import tech.kzen.shell.ui.DesktopUi
 
 
 //---------------------------------------------------------------------------------------------------------------------
+private val logger = LoggerFactory.getLogger("tech.kzen.shell.KzenShellMain")
+
+
 fun main(args: Array<String>) {
     val context = kzenShellInit(args)
 
@@ -31,6 +35,11 @@ fun main(args: Array<String>) {
 
 //---------------------------------------------------------------------------------------------------------------------
 fun kzenShellInit(args: Array<String>): KzenShellContext {
+    // Identify the running shell binary in the log (headless proxy — no logo to hover, unlike the
+    //  launcher/project UIs which show their build on logo hover).
+    val buildInfo = BuildInfo.load("/kzen-shell-build.properties")
+    logger.info("kzen-shell {}", buildInfo?.display() ?: "(build stamp unavailable)")
+
     // Launcher + project-archetype sources resolve via --args > kzen-shell.properties > GitHub default.
     val properties = KzenShellProperties.load(args)
 
