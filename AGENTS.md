@@ -6,6 +6,8 @@ kzen-shell is the **desktop composition root** — the only thing a packaged end
 
 Unlike the other siblings, kzen-shell is **JVM-only, single-module**, and does NOT consume kzen-lib's notation/CQRS model directly. It's a process manager and HTTP proxy.
 
+The shell is deliberately a tiny, stable kernel that ~never needs re-releasing, while the launcher UI evolves with the product and updates by artifact download — the shell/launcher split *is* the update mechanism, so don't merge the launcher into the shell to save a process.
+
 ## Module layout
 
 Single Gradle project — no `-common` / `-jvm` / `-js` split. Sources at `src/main/kotlin/tech/kzen/shell/`.
@@ -31,7 +33,7 @@ End-user packaging (the `kzen-<v>.zip` distribution on GitHub releases) is produ
 
 ## How the reverse proxy works
 
-**Routing contract: `/<process-name>/<subpath>` is forwarded to whichever child process registered under `<process-name>` in `ProcessRegistry`.** This contract is the load-bearing piece — every child UI must serve its own assets as if mounted at that prefix.
+**Routing contract: `/<process-name>/<subpath>` is forwarded to whichever child process registered under `<process-name>` in `ProcessRegistry`.** This contract is the load-bearing piece — every child UI must serve its own assets as if mounted at that prefix. Children honour it by deriving their base URL from the browser path (`window.location.pathname.substringBeforeLast("/")` — launcher `ajaxUtil.kt`, kzen-auto `ClientContext.kt`) and serving relative asset URLs, so any child UI works at any prefix with zero configuration; the proxy never rewrites response bodies. Any new child UI must do the same.
 
 Special rules in `KzenShellMain.kt`:
 
@@ -49,15 +51,14 @@ Special rules in `KzenShellMain.kt`:
 | `context/KzenShellProperties.kt` | Config: launcher dir, launcher zip URL, port |
 | `ui/DesktopUi.kt` | Opens the system browser to `http://localhost:<port>` |
 | `proxy/ProxyHandler.kt` | The reverse-proxy core: name-prefix routing, header forwarding, `main` rewrite |
-| `proxy/ProxyApi.kt`, `proxy/ProxyResult.kt` | Proxy types |
 | `registry/ProcessRegistry.kt` | Registry of running child processes (name → port + attributes) |
-| `registry/ProjectRegistry.kt` | Guava cache of user-launched project processes |
+| `registry/ProjectRegistry.kt` | Async STARTING/RUNNING/STOPPING/FAILED state machine of user-launched project processes |
 | `process/MainJarRunner.kt`, `process/MainJarProcess.kt` | Spawns `main.jar` files (used for both launcher and projects) |
-| `process/GradleRunner.kt`, `process/GradleProcess.kt` | Alternate spawn path via Gradle (dev convenience) |
 | `repo/ArtifactRepo.kt`, `repo/DownloadService.kt` | Download + cache of launcher/project zips |
-| `run/LauncherRunner.kt` | Specialized runner for the launcher (first child) |
 | `util/FreePortUtil.kt` | Allocates free ports for child processes |
-| `util/ProcessAwaitUtil.kt` | Waits for a child to become healthy on its port |
+| `util/ProcessAwaitUtil.kt` | Waits for a child to become healthy on its port (bounded, checks `isAlive`) |
+
+`proxy/ProxyApi.kt`, `context/WebfluxConfig.kt`, `run/LauncherRunner.kt`, `model/ProjectModel.kt`, and `process/GradleRunner.kt`/`GradleProcess.kt` are fully-commented Spring-era dead files — don't take them as documentation of current behaviour (deletion is planned).
 
 ## Gotchas
 
@@ -66,6 +67,7 @@ Special rules in `KzenShellMain.kt`:
 - **No KMP, no kotlin-wrappers.** This is the only sibling that's plain JVM. Don't try to apply `-common`/`-jvm`/`-js` module-split assumptions here.
 - **The `/main/` URL prefix is special.** Child processes (launcher, projects) don't know what name they're registered under — they have to serve from `/<their-name>/...` consistently. The launcher hard-codes `main` as its self-name in some places.
 - **`work/` and `logs/` are runtime dirs.** `work/` holds downloaded/extracted launcher and project payloads. `logs/` holds shell + child-process stdout/stderr. Both `.gitignore`d.
+- **Launcher heap is pinned small on purpose** (`-Xmx64m`, `KzenShellContext`) — it's a registry + static file server. If the launcher ever OOMs, grow deliberately; don't inherit project-sized args.
 
 ## End-to-end runtime
 
