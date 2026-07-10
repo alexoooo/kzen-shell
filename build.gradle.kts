@@ -11,7 +11,7 @@ plugins {
 
 
 group = "tech.kzen"
-version = "0.29.1-SNAPSHOT"
+version = "0.29.1"
 
 
 repositories {
