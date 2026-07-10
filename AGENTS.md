@@ -22,12 +22,12 @@ There's no dev-mode `BackendDevelopment`/`FrontendDevelopment` pair — kzen-she
 
 ```powershell
 ./gradlew build
-java -jar build/libs/kzen-shell-0.29.1-SNAPSHOT.jar
+java -jar build/libs/kzen-shell-0.30.0-SNAPSHOT.jar
 # Use the JDK 26 toolchain explicitly if PATH java is older (the jar is now class-file v70):
-& "C:/Users/ostro/.jdks/temurin-26.0.1/bin/java" -jar build/libs/kzen-shell-0.29.1-SNAPSHOT.jar
+& "C:/Users/ostro/.jdks/temurin-26.0.1/bin/java" -jar build/libs/kzen-shell-0.30.0-SNAPSHOT.jar
 ```
 
-End-user packaging (the `kzen-<v>.zip` distribution on GitHub releases) is hand-built, not produced by Gradle.
+End-user packaging (the `kzen-<v>.zip` distribution on GitHub releases) is produced by the `distWindows` Gradle task — see **Distribution** below (neither `dist` task is wired into `build`).
 
 ## How the reverse proxy works
 
@@ -61,7 +61,7 @@ Special rules in `KzenShellMain.kt`:
 
 ## Gotchas
 
-- **Launcher zip source is config, not a hard-coded path.** `KzenShellProperties.load` resolves it from `--launcher.zip=` arg > `kzen-shell.properties` (read from the working dir); `launcher.dir` is the unpack dir. The `dist` zip bundles a release `kzen-shell.properties` pointing at the launcher's GitHub URL (generated from `version`). `file://` sources are re-extracted on every boot (`ArtifactRepo.downloadIfAbsent`), so a rebuilt launcher zip is picked up automatically; `https` release sources install once. On a version bump edit the versions in `kzen-shell.properties`. Full release procedure: [`../kzen/docs/RELEASING.md`](../kzen/docs/RELEASING.md).
+- **Launcher zip source is config, not a hard-coded path.** `KzenShellProperties.load` resolves it from `--launcher.zip=` arg > `kzen-shell.properties` (read from the working dir); `launcher.dir` is the unpack dir. The `dist` zip bundles a release `kzen-shell.properties` pointing at the launcher's GitHub URL (generated from `version`). `file://` sources are re-extracted on every boot (`ArtifactRepo.downloadIfAbsent`), so a rebuilt launcher zip is picked up automatically; `https` release sources install once. As of 0.30.0 the download+extract is staged in a sibling `<dir>.staging/`, verified (`main.jar` must exist), then atomically swapped into place, and the presence check keys on `main.jar` (not the dir) — so a crash mid-extract self-heals on the next boot instead of leaving a half-populated dir that looks complete. On a version bump edit the versions in `kzen-shell.properties`. Full release procedure: [`../kzen/docs/RELEASING.md`](../kzen/docs/RELEASING.md).
 - **`MainJarRunner` looks for `main.jar`.** The launcher renames its downloaded fat jar to `main.jar` (`kzen-launcher/.../ProjectCreator.kt:62`); don't change this convention without updating both sides.
 - **No KMP, no kotlin-wrappers.** This is the only sibling that's plain JVM. Don't try to apply `-common`/`-jvm`/`-js` module-split assumptions here.
 - **The `/main/` URL prefix is special.** Child processes (launcher, projects) don't know what name they're registered under — they have to serve from `/<their-name>/...` consistently. The launcher hard-codes `main` as its self-name in some places.
