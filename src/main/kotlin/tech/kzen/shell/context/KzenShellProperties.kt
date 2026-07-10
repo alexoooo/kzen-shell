@@ -7,9 +7,9 @@ import java.util.Properties
 
 
 data class KzenShellProperties(
-    val path: String? = null,
-    val download: String? = null,
-    val port: Int = 80
+    val path: String,
+    val download: String,
+    val port: Int = 8080
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -38,11 +38,13 @@ data class KzenShellProperties(
             val properties = readPropertiesFile()
 
             val launcherDir = argValue(args, launcherDirArg) ?: properties.getProperty(launcherDirKey)
+                ?: error("No launcher directory configured: set '$launcherDirKey' in $propertiesFileName or pass $launcherDirArg")
             val launcherZip = argValue(args, launcherZipArg) ?: properties.getProperty(launcherZipKey)
+                ?: error("No launcher source configured: set '$launcherZipKey' in $propertiesFileName or pass $launcherZipArg")
 
             return KzenShellProperties(
                 path = launcherDir,
-                download = launcherZip?.let { asUri(it) },
+                download = asUri(launcherZip),
                 port = readPort(args) ?: 8080)
         }
 

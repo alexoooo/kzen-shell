@@ -121,7 +121,7 @@ class ProxyHandler(
         if (name == "main") {
             // TODO: centralize this logic
             val fullPath = Paths
-                .get(properties.path!!)
+                .get(properties.path)
                 .resolve("main.jar")
                 .toAbsolutePath()
                 .normalize()

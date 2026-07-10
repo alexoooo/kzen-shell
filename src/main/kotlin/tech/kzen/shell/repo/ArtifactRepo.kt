@@ -6,9 +6,11 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
 import java.net.URI
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
@@ -18,7 +20,14 @@ class ArtifactRepo(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val logger = LoggerFactory.getLogger(DownloadService::class.java)!!
+        private val logger = LoggerFactory.getLogger(ArtifactRepo::class.java)!!
+
+        private const val mainJarName = "main.jar"
+        private const val archiveName = "archive.zip"
+
+        // Extraction happens in a sibling staging dir and is atomically swapped into the target, so a
+        //  crash mid-extract leaves only the staging dir (cleaned next boot), never a half-populated target.
+        private const val stagingSuffix = ".staging"
     }
 
 
@@ -30,44 +39,64 @@ class ArtifactRepo(
         val isLocalSource = download.scheme == "file"
 
         if (Files.exists(path)) {
-            // Remote (https) release artifacts are immutable per version — install once. Local
-            //  (file://) sources are mutable dev SNAPSHOTs — re-acquire so a rebuilt zip is picked up,
-            //  but only wipe a directory that looks like one of our own prior extractions (file safety).
-            if (!isLocalSource) {
+            // A complete remote (https) artifact is immutable per version — install once.
+            if (isComplete(path) && !isLocalSource) {
                 return false
             }
+            // Never clobber a directory that isn't one of our own extractions (file safety).
             if (!looksLikeExtraction(path)) {
                 logger.warn("not refreshing (not a recognized extraction dir): {}", path)
                 return false
             }
-            logger.info("refreshing local artifact: {}", path)
-            deleteRecursively(path)
+            // Local (file://) sources are mutable dev SNAPSHOTs; a dir missing main.jar is a
+            //  crash-mid-extract half-state. Either way re-acquire — but only swap in the fresh copy
+            //  once it is fully staged and verified below, so the existing copy survives a failed retry.
+            logger.info("re-acquiring artifact: {}", path)
         }
 
-        Files.createDirectories(path)
-        val zipPath = path.resolve("archive.zip")
+        val staging = stagingDir(path)
+        if (Files.exists(staging)) {
+            deleteRecursively(staging)
+        }
+        Files.createDirectories(staging)
 
+        val zipPath = staging.resolve(archiveName)
         if (isLocalSource) {
             val sourcePath = Paths.get(download)
             logger.info("reading from disk: {}", sourcePath)
-
             Files.copy(sourcePath, zipPath)
         }
         else {
             downloadService.download(download, zipPath)
         }
 
-        extractZip(zipPath, path)
+        extractZip(zipPath, staging)
+        Files.delete(zipPath)
 
+        check(Files.exists(staging.resolve(mainJarName))) {
+            "artifact missing $mainJarName after extract: $download"
+        }
+
+        swapIntoPlace(staging, path)
         return true
     }
 
 
+    private fun isComplete(path: Path): Boolean {
+        return Files.exists(path.resolve(mainJarName))
+    }
+
+
     // A dir is safe to wipe-and-refresh only if it carries evidence of a prior extraction —
-    //  the extracted entry point (main.jar) or the staging archive we leave behind.
+    //  the extracted entry point (main.jar) or the staging archive an older layout left behind.
     private fun looksLikeExtraction(path: Path): Boolean {
-        return Files.exists(path.resolve("main.jar")) ||
-                Files.exists(path.resolve("archive.zip"))
+        return Files.exists(path.resolve(mainJarName)) ||
+                Files.exists(path.resolve(archiveName))
+    }
+
+
+    private fun stagingDir(path: Path): Path {
+        return path.resolveSibling(path.fileName.toString() + stagingSuffix)
     }
 
 
@@ -76,39 +105,48 @@ class ArtifactRepo(
     }
 
 
+    private fun swapIntoPlace(staging: Path, target: Path) {
+        Files.createDirectories(target.parent)
+        if (Files.exists(target)) {
+            deleteRecursively(target)
+        }
+        try {
+            Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE)
+        }
+        catch (e: AtomicMoveNotSupportedException) {
+            // staging and target on different stores — a plain move copies then deletes.
+            logger.info("atomic move unsupported ({}), copying across stores: {} -> {}", e.message, staging, target)
+            Files.move(staging, target)
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     // https://www.baeldung.com/java-compress-and-uncompress
     private fun extractZip(zipFile: Path, outputDir: Path) {
-        val buffer = ByteArray(1024)
-        val zis = ZipInputStream(Files.newInputStream(zipFile))
-        var zipEntry = zis.nextEntry
-        while (zipEntry != null) {
-            val newFile = newFile(outputDir, zipEntry)
-            if (zipEntry.isDirectory) {
-                if (!Files.isDirectory(newFile)) {
-                    Files.createDirectories(newFile)
+        ZipInputStream(Files.newInputStream(zipFile)).use { zis ->
+            var zipEntry = zis.nextEntry
+            while (zipEntry != null) {
+                val newFile = newFile(outputDir, zipEntry)
+                if (zipEntry.isDirectory) {
+                    if (!Files.isDirectory(newFile)) {
+                        Files.createDirectories(newFile)
+                    }
                 }
-            }
-            else {
-                // fix for Windows-created archives
-                val parent = newFile.parent
-                if (!Files.isDirectory(parent)) {
-                    Files.createDirectories(parent)
-                }
+                else {
+                    // fix for Windows-created archives
+                    val parent = newFile.parent
+                    if (!Files.isDirectory(parent)) {
+                        Files.createDirectories(parent)
+                    }
 
-                // write file content
-                val fos = Files.newOutputStream(newFile)
-                var len: Int
-                while (zis.read(buffer).also { len = it } > 0) {
-                    fos.write(buffer, 0, len)
+                    Files.newOutputStream(newFile).use { output ->
+                        zis.copyTo(output)
+                    }
                 }
-                fos.close()
+                zipEntry = zis.nextEntry
             }
-            zipEntry = zis.nextEntry
         }
-
-        zis.closeEntry()
-        zis.close()
     }
 
     private fun newFile(destinationDir: Path, zipEntry: ZipEntry): Path {

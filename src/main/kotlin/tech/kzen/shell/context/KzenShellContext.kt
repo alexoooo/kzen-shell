@@ -47,8 +47,8 @@ class KzenShellContext(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun start() {
-        val path = Paths.get(properties.path!!)
-        val download = URI(properties.download!!)
+        val path = Paths.get(properties.path)
+        val download = URI(properties.download)
         artifactRepo.downloadIfAbsent(path, download)
 
         val jarPath = path.resolve("main.jar").toAbsolutePath().normalize()
