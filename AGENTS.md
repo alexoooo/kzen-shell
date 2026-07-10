@@ -61,11 +61,7 @@ Special rules in `KzenShellMain.kt`:
 
 ## Gotchas
 
-- **Hard-coded launcher zip path.** `KzenShellMain.kt:45` pins:
-  ```
-  file:///C:/Users/ostro/IdeaProjects/kzen-launcher/kzen-launcher-jvm/build/libs/kzen-launcher-0.29.1-SNAPSHOT.zip
-  ```
-  Bumping the launcher version means editing this line *and* the unpacked-dir name on line 44 (`../work/kzen-launcher/kzen-launcher-<v>/`). The commented-out GitHub releases URL on line 46 is the alternate source.
+- **Launcher zip source is config, not a hard-coded path.** `KzenShellProperties.load` resolves it from `--launcher.zip=` arg > `kzen-shell.properties` (read from the working dir); `launcher.dir` is the unpack dir. The `dist` zip bundles a release `kzen-shell.properties` pointing at the launcher's GitHub URL (generated from `version`). `file://` sources are re-extracted on every boot (`ArtifactRepo.downloadIfAbsent`), so a rebuilt launcher zip is picked up automatically; `https` release sources install once. On a version bump edit the versions in `kzen-shell.properties`. Full release procedure: [`../kzen/docs/RELEASING.md`](../kzen/docs/RELEASING.md).
 - **`MainJarRunner` looks for `main.jar`.** The launcher renames its downloaded fat jar to `main.jar` (`kzen-launcher/.../ProjectCreator.kt:62`); don't change this convention without updating both sides.
 - **No KMP, no kotlin-wrappers.** This is the only sibling that's plain JVM. Don't try to apply `-common`/`-jvm`/`-js` module-split assumptions here.
 - **The `/main/` URL prefix is special.** Child processes (launcher, projects) don't know what name they're registered under — they have to serve from `/<their-name>/...` consistently. The launcher hard-codes `main` as its self-name in some places.
@@ -73,13 +69,21 @@ Special rules in `KzenShellMain.kt`:
 
 ## End-to-end runtime
 
-1. User runs `kzen.bat` → `java -jar kzen-shell-*.jar`.
+1. User runs `kzen.bat` (windowless, via the bundled `jdk\`) or `kzen-cmd.bat` (console) → `javaw -jar kzen-<v>.jar`.
 2. Shell downloads `kzen-launcher-<v>.zip` (if missing) into `../work/kzen-launcher/...`, unpacks it.
 3. `MainJarRunner` spawns the launcher as `main.jar` on a free port; registers it in `ProcessRegistry` as `main`.
 4. Shell binds `127.0.0.1:8080`, opens the browser to `http://localhost:8080/` (redirects to `/main/index.html` → launcher's index).
 5. User picks a project archetype in the launcher UI → launcher REST calls reach the shell via the proxy.
 6. Shell's `/shell/project/start` spawns the chosen project as a new `main.jar` on a free port; registers it in `ProjectRegistry` + `ProcessRegistry` under the project's name.
 7. Browser navigates to `/<project-name>/...`; proxy forwards everything there.
+
+## Distribution
+
+Two `dist` tasks build the app archives (neither wired into `build`): `distJars` → `kzen-<v>-jars.zip`
+(jars only, for a bring-your-own-JDK user) and `distWindows` → `kzen-<v>.zip` (jars + a bundled Temurin
+JDK + `kzen.bat`/`kzen-cmd.bat`). The JDK is fetched + SHA-256-verified + cached by the
+`ProvisionAdoptiumJdk` task in `buildSrc/src/main/kotlin/dist/`. Full release procedure:
+[`../kzen/docs/RELEASING.md`](../kzen/docs/RELEASING.md).
 
 ## Pointers
 

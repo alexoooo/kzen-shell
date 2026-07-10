@@ -1,3 +1,4 @@
+import dist.ProvisionAdoptiumJdk
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -106,6 +107,7 @@ val copyDependencies = tasks.register<Copy>("copyDependencies") {
 
 tasks.named<Jar>("jar") {
     dependsOn(copyDependencies)
+    archiveFileName.set("kzen-$version.jar")
 
     manifest {
         attributes["Main-Class"] = "tech.kzen.shell.KzenShellMainKt"
@@ -119,13 +121,92 @@ tasks.named<Jar>("jar") {
 }
 
 
-// Distribution zip: the shell jar (keeps its name — end users run `java -jar kzen-shell-<v>.jar`)
-//  + dependencies/. Launcher scripts (kzen.bat/kzen.sh) and offline launcher-seeding are Phase 4.
-tasks.register<Zip>("dist") {
-    dependsOn("jar", "copyDependencies")
-    archiveFileName.set("kzen-$version.zip")
-    destinationDirectory.set(layout.buildDirectory.dir("dist"))
+// Release config bundled into the dist zip: a kzen-shell.properties pointing at the launcher's GitHub
+//  release. The version is derived from `version` with `-SNAPSHOT` stripped, so even a dev-built dist
+//  names the eventual release (the git-tracked repo-root kzen-shell.properties stays the dev config —
+//  the shell reads CWD first, so this bundled copy only matters once the zip is unzipped elsewhere).
+val generateReleaseConfig = tasks.register("generateReleaseConfig") {
+    val releaseVersion = version.toString().removeSuffix("-SNAPSHOT")
+    val outputFile = layout.buildDirectory.file("dist-config/kzen-shell.properties")
+    inputs.property("releaseVersion", releaseVersion)
+    outputs.file(outputFile)
+    doLast {
+        outputFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(
+                "launcher.zip=https://github.com/alexoooo/kzen-launcher/releases/download/" +
+                    "v$releaseVersion/kzen-launcher-$releaseVersion.zip\n" +
+                "launcher.dir=work/kzen-launcher/kzen-launcher-$releaseVersion\n")
+        }
+    }
+}
 
+
+// Adoptium Temurin JDK bundled into the Windows distribution so end users need no local Java install.
+//  Its feature version tracks the compile target so the shipped runtime matches what the app is built for.
+val provisionJdk = tasks.register<ProvisionAdoptiumJdk>("provisionJdk") {
+    featureVersion.set(javaVersion)
+    operatingSystem.set("windows")
+    architecture.set("x64")
+    downloadCacheDirectory.set(gradle.gradleUserHomeDir.resolve("caches/kzen-adoptium-jdk"))
+    jdkDirectory.set(layout.buildDirectory.dir("jdk"))
+}
+
+
+// Windows launchers: kzen.bat (javaw + start) runs windowless; kzen-cmd.bat (java) keeps a console for logs.
+//  Everything the action needs is captured into task-local vals so the action stays config-cache-safe.
+val generateWindowsLaunchers = tasks.register("generateWindowsLaunchers") {
+    val applicationJar = "kzen-$version.jar"
+    val bundledJdkDir = "jdk"
+    val launcherJvmArgs = "-XX:+UseShenandoahGC -Xmx64m"
+    val outputDir = layout.buildDirectory.dir("launchers")
+    inputs.property("applicationJar", applicationJar)
+    inputs.property("launcherJvmArgs", launcherJvmArgs)
+    inputs.property("bundledJdkDir", bundledJdkDir)
+    outputs.dir(outputDir)
+    doLast {
+        val lineSeparator = "\r\n"
+        fun batchScript(command: String) =
+            listOf("@echo off", "cd /d \"%~dp0\"", command)
+                .joinToString(lineSeparator, postfix = lineSeparator)
+        val dir = outputDir.get().asFile
+        dir.mkdirs()
+        dir.resolve("kzen.bat").writeText(
+            batchScript("start \"\" \"$bundledJdkDir\\bin\\javaw.exe\" $launcherJvmArgs -jar \"$applicationJar\""))
+        dir.resolve("kzen-cmd.bat").writeText(
+            batchScript("\"$bundledJdkDir\\bin\\java.exe\" $launcherJvmArgs -jar \"$applicationJar\""))
+    }
+}
+
+
+// Payload shared by both archives: the shell jar (named kzen-<v>.jar; its Class-Path manifest resolves
+//  dependencies/ as a sibling), the dependency jars, and the bundled release config.
+val distributionRoot = "kzen-$version"
+val distributionContent = copySpec {
     from(tasks.named("jar"))
-    from(layout.buildDirectory.dir("libs/$dependenciesDir")) { into(dependenciesDir) }
+    from(copyDependencies) { into(dependenciesDir) }
+    from(generateReleaseConfig)
+}
+
+val configureAppArchive: (Zip) -> Unit = { archive ->
+    archive.destinationDirectory.set(layout.buildDirectory.dir("dist"))
+    archive.into(distributionRoot) { with(distributionContent) }
+}
+
+
+// kzen-<v>-jars.zip: the JVM app for users who bring their own JDK.
+tasks.register<Zip>("distJars") {
+    configureAppArchive(this)
+    archiveFileName.set("kzen-$version-jars.zip")
+}
+
+
+// kzen-<v>.zip: the turnkey Windows app — the jars plus the bundled JDK and launchers.
+tasks.register<Zip>("distWindows") {
+    configureAppArchive(this)
+    archiveFileName.set("kzen-$version.zip")
+    into(distributionRoot) {
+        from(provisionJdk.flatMap { it.jdkDirectory })
+        from(generateWindowsLaunchers)
+    }
 }
