@@ -6,7 +6,7 @@ import tech.kzen.shell.process.MainJarRunner
 import tech.kzen.shell.proxy.ProxyHandler
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.registry.ProjectRegistry
-import tech.kzen.shell.repo.ArtifactRepo
+import tech.kzen.shell.repo.ArtifactInstaller
 import tech.kzen.shell.repo.DownloadService
 import tech.kzen.shell.util.FreePortUtil
 import java.net.URI
@@ -20,7 +20,7 @@ class KzenShellContext(
     //-----------------------------------------------------------------------------------------------------------------
     val downloadService = DownloadService()
 
-    val artifactRepo = ArtifactRepo(downloadService)
+    val artifactInstaller = ArtifactInstaller(downloadService)
 
     val processRegistry = ProcessRegistry()
     val mainJarRunner = MainJarRunner(processRegistry)
@@ -43,7 +43,8 @@ class KzenShellContext(
     fun start() {
         val path = Paths.get(properties.path)
         val download = URI(properties.download)
-        artifactRepo.downloadIfAbsent(path, download)
+        artifactInstaller.downloadIfAbsent(path, download)
+        artifactInstaller.pruneStaleSnapshotSiblings(path)
 
         val jarPath = path.resolve("main.jar").toAbsolutePath().normalize()
 
