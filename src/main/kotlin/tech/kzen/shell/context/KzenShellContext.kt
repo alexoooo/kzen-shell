@@ -40,12 +40,6 @@ class KzenShellContext(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    init {
-        downloadService.trustBadCertificate()
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     fun start() {
         val path = Paths.get(properties.path)
         val download = URI(properties.download)

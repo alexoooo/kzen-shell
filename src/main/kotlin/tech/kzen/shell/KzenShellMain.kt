@@ -1,5 +1,6 @@
 package tech.kzen.shell
 
+import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -10,6 +11,7 @@ import io.ktor.server.routing.*
 import org.slf4j.LoggerFactory
 import tech.kzen.shell.context.KzenShellContext
 import tech.kzen.shell.context.KzenShellProperties
+import tech.kzen.shell.security.SecurityGate
 import tech.kzen.shell.ui.DesktopUi
 
 
@@ -70,6 +72,8 @@ fun Application.ktorMain(
         jackson()
     }
 
+    SecurityGate.install(this)
+
     routing {
         routeRequests(context)
     }
@@ -91,12 +95,22 @@ private fun Routing.routeRequests(
         call.respond(response)
     }
     get("/shell/project/start") {
-        context.proxyHandler.start(call.parameters)
-        call.respondText("started")
+        try {
+            context.proxyHandler.start(call.parameters)
+            call.respondText("started")
+        }
+        catch (e: IllegalArgumentException) {
+            call.respondText(e.message ?: "invalid request", status = HttpStatusCode.BadRequest)
+        }
     }
     get("/shell/project/stop") {
-        val response = context.proxyHandler.stop(call.parameters)
-        call.respond(response)
+        try {
+            val response = context.proxyHandler.stop(call.parameters)
+            call.respond(response)
+        }
+        catch (e: IllegalArgumentException) {
+            call.respondText(e.message ?: "invalid request", status = HttpStatusCode.BadRequest)
+        }
     }
 
     route("{...}") {

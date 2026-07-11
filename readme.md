@@ -13,6 +13,11 @@
 - Wait to load...
 - Browser will open at: http://localhost:8080
 
+### Notes
+- Artifact downloads (launcher zip) validate TLS certificates with the JVM's default trust
+  store. In environments with TLS-intercepting proxies (corporate MITM), supply your own trust
+  store via `-Djavax.net.ssl.trustStore=<path>` when launching.
+
 ### Screenshots
 See: https://github.com/alexoooo/kzen-shell/wiki/Screenshots
 

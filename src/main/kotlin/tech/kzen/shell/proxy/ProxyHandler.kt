@@ -20,6 +20,7 @@ import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Paths
 
 
@@ -87,7 +88,14 @@ class ProxyHandler(
 
         val jvmArgs = parameters.getParamOrNull("args") ?: ""
 
-        projectRegistry.start(name, Paths.get(location), jvmArgs)
+        // Defense-in-depth (SecurityGate blocks cross-site callers): the browser supplies the
+        //  path, so only spawn a project layout — main.jar inside the given home — never an
+        //  arbitrary file.
+        val home = Paths.get(location).toAbsolutePath().normalize()
+        require(Files.isRegularFile(home.resolve("main.jar"))) { "main.jar not found in: $home" }
+
+        logger.info("Project start requested: {} @ {}", name, home)
+        projectRegistry.start(name, home, jvmArgs)
     }
 
 
