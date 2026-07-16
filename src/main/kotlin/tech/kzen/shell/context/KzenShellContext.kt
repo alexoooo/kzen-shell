@@ -51,6 +51,18 @@ class KzenShellContext(
             socketTimeoutMillis = 60_000
             connectTimeoutMillis = 10_000
         }
+
+        // DO NOT install(ContentEncoding) here. kzen-auto gzip/deflate-compresses its JSON responses
+        // (Ktor Compression, TP1), and this proxy relays that compression END TO END: it forwards the
+        // browser's Accept-Encoding upstream, and copies the raw gzipped body + Content-Encoding back
+        // downstream verbatim (ProxyHandler: Content-Encoding is neither hop-by-hop nor in Ktor's unsafe
+        // header set, and the body is a byte-for-byte copyTo). The browser does the decoding.
+        //
+        // The ContentEncoding client plugin would break this: it injects its own Accept-Encoding and
+        // TRANSPARENTLY DECODES the upstream body (stripping Content-Encoding/Content-Length), so the proxy
+        // would then relay decompressed bytes on the proxied leg — throwing away the whole transfer saving,
+        // and re-introducing exactly the byte volume TP1/TP3 removed. There is no plugin to add here; the
+        // correct behaviour is to install nothing and let the bytes pass through.
     }
 
     val proxyHandler = ProxyHandler(
