@@ -2,6 +2,7 @@ package tech.kzen.shell.context
 
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
 import tech.kzen.shell.process.MainJarRunner
 import tech.kzen.shell.proxy.ProxyHandler
 import tech.kzen.shell.registry.ProcessRegistry
@@ -30,6 +31,26 @@ class KzenShellContext(
     val httpClient = HttpClient(CIO) {
         followRedirects = false
         expectSuccess = false
+
+        // The proxy relays arbitrarily long-lived responses: kzen-auto's /logic/events SSE stream (open for the
+        // life of the page) and large file downloads. CIO's engine default requestTimeout is 15s and is a
+        // wall-clock cap on the ENTIRE call context — when it fires it cancels the response body channel
+        // mid-stream, which ProxyHandler can only log ("interrupted after response was committed") because the
+        // status and headers are long since committed. The browser just sees a silently truncated 200.
+        //
+        // CIO exempts SSE / upgrade requests from that default, but every exemption is keyed off the request
+        // BODY type (SSEClientContent / ClientUpgradeContent) or an explicit timeout capability — and this proxy
+        // forwards via a plain prepareRequest with a pass-through body, so none of them ever apply here.
+        //
+        // So: drop the wall-clock bound (a stream has no legitimate total-duration limit) and rely on a finite
+        // SOCKET timeout instead — an inter-byte deadline, which is the real liveness question for a stream and
+        // still detects a wedged or dead child. kzen-auto's SSE route heartbeats every 15s, giving 4x margin
+        // (it tolerates 3 consecutive lost heartbeats before this fires).
+        install(HttpTimeout) {
+            requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+            socketTimeoutMillis = 60_000
+            connectTimeoutMillis = 10_000
+        }
     }
 
     val proxyHandler = ProxyHandler(
