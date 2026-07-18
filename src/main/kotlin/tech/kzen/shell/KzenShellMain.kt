@@ -1,7 +1,7 @@
 package tech.kzen.shell
 
 import io.ktor.http.*
-import io.ktor.serialization.jackson.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -69,7 +69,10 @@ fun Application.ktorMain(
 ) {
     install(IgnoreTrailingSlash)
     install(ContentNegotiation) {
-        jackson()
+        // SER5: kotlinx.serialization (Jackson removed). Serves the two control endpoints' JSON —
+        // List<RunningProjectStatus> and a Boolean (both @Serializable / built-in). Proxied traffic streams
+        // through untouched and never hits this converter.
+        json()
     }
 
     SecurityGate.install(this)

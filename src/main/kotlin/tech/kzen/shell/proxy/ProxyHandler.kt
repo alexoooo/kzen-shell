@@ -10,12 +10,13 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.utils.io.*
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 import tech.kzen.shell.context.KzenShellProperties
 import tech.kzen.shell.model.RunningProjectStatus
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.registry.ProjectRegistry
-import tools.jackson.databind.json.JsonMapper
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketException
@@ -33,8 +34,6 @@ class ProxyHandler(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(ProxyHandler::class.java)
-
-        private val errorMapper: JsonMapper = JsonMapper.builder().build()
 
         // Hop-by-hop headers (RFC 7230 §6.1) plus Host/Content-Length, matched case-insensitively.
         // Content-Type/Content-Length/Transfer-Encoding are handled via the request body (OutgoingContent)
@@ -249,7 +248,10 @@ class ProxyHandler(
         error: String,
         name: String
     ) {
-        val body = errorMapper.writeValueAsString(mapOf("error" to error, "name" to name))
+        val body = buildJsonObject {
+            put("error", error)
+            put("name", name)
+        }.toString()
         call.respondText(body, ContentType.Application.Json, status)
     }
 

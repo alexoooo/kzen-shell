@@ -7,6 +7,7 @@ import java.time.temporal.ChronoUnit
 
 plugins {
     kotlin("jvm") version kotlinVersion
+    kotlin("plugin.serialization") version kotlinVersion
 }
 
 
@@ -33,7 +34,7 @@ kotlin {
 dependencies {
     implementation(kotlin("reflect"))
 
-    implementation("tools.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 
     implementation("com.google.guava:guava:$guavaVersion")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
@@ -41,8 +42,7 @@ dependencies {
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-html-builder-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
-//    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-jackson:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
 
     implementation("io.ktor:ktor-client-core:$ktorVersion")
     implementation("io.ktor:ktor-client-cio:$ktorVersion")
