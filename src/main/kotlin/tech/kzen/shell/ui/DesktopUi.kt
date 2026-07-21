@@ -68,6 +68,24 @@ object DesktopUi {
     }
 
 
+    // Replaces the loader when the shell cannot serve at all, so a second launch says what happened
+    //  instead of hanging on "Loading..." forever.
+    fun showBindFailure(port: Int) {
+        SwingUtilities.invokeLater {
+            if (lazyFrame == null) {
+                selectTheme()
+                lazyFrame = createAndShowUi()
+            }
+
+            val frame = lazyFrame!!
+            frame.title = "$title - Cannot start"
+            frame.contentPane = bindFailurePane(port)
+            frame.revalidate()
+            frame.repaint()
+        }
+    }
+
+
     private fun openInBrowser(): Boolean {
         val desktop =
                 if (Desktop.isDesktopSupported()) {
@@ -184,6 +202,54 @@ object DesktopUi {
         pane.add(doc("Note: some components may need to be downloaded."))
         pane.add(doc("  If your firewall asks for permission,"))
         pane.add(doc("  please allow access."))
+
+        return pane
+    }
+
+
+    // DA5 replaces this pane with single-instance focus-existing-window behaviour.
+    private fun bindFailurePane(port: Int): JPanel {
+        val pane = JPanel()
+        pane.layout = BoxLayout(pane, BoxLayout.Y_AXIS)
+
+        val logo = JLabel(ImageIcon(logo()))
+        logo.alignmentX = Component.CENTER_ALIGNMENT
+        pane.add(JLabel(" "))
+        pane.add(logo)
+        pane.add(JLabel(" "))
+        pane.add(JLabel(" "))
+
+        val label = JLabel("Cannot start")
+        label.font = Font(Font.SANS_SERIF, Font.BOLD, 32)
+        label.alignmentX = Component.CENTER_ALIGNMENT
+        pane.add(label)
+
+        pane.add(doc(" "))
+        pane.add(doc("Port $port on 127.0.0.1 is already in use."))
+        pane.add(doc(" "))
+        pane.add(doc("Kzen may already be running — check your browser tabs"))
+        pane.add(doc("  and the System Tray."))
+        pane.add(doc("If another app owns the port, start Kzen with"))
+        pane.add(doc("  --server.port=<other>"))
+        pane.add(doc(" "))
+
+        val open = JButton("Open in browser")
+        open.alignmentX = Component.CENTER_ALIGNMENT
+        open.addActionListener {
+            openInBrowser()
+        }
+        pane.add(open)
+
+        pane.add(doc(" "))
+
+        val exit = JButton("Exit")
+        exit.alignmentX = Component.CENTER_ALIGNMENT
+        exit.addActionListener {
+            exitProcess(1)
+        }
+        pane.add(exit)
+
+        pane.add(doc(" "))
 
         return pane
     }

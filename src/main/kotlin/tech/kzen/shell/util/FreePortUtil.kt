@@ -1,6 +1,9 @@
 package tech.kzen.shell.util
 
+import java.io.IOException
 import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.util.*
 import javax.net.ServerSocketFactory
 
@@ -9,6 +12,9 @@ object FreePortUtil {
     // Dynamic ports - https://en.wikipedia.org/wiki/Registered_port
     private const val minPort = 49152
     private const val maxPort = 65535
+
+    // The interface the shell serves on, so the probe asks exactly the question the engine will.
+    private const val loopbackHost = "127.0.0.1"
 
     private val random = Random()
 
@@ -31,6 +37,21 @@ object FreePortUtil {
         while (!isPortAvailable(candidatePort))
 
         return candidatePort
+    }
+
+
+    // Pre-flight for the shell's own fixed listen port. reuseAddress is deliberately left off: on Windows
+    //  SO_REUSEADDR allows binding a port that already has a live listener, which would mask the conflict.
+    fun isTcpPortFree(port: Int): Boolean {
+        return try {
+            ServerSocket().use {
+                it.bind(InetSocketAddress(loopbackHost, port))
+            }
+            true
+        }
+        catch (e: IOException) {
+            false
+        }
     }
 
 

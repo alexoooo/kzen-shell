@@ -12,14 +12,17 @@ import java.util.concurrent.TimeUnit
 class MainJarProcess private constructor (
     val name: String,
     private val process: Process,
-    private val drain: Thread,
-    private val processRegistry: ProcessRegistry
+    private val processRegistry: ProcessRegistry,
+    logFile: Path
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // Backstop for a child that spawns but never serves HTTP (hang / mis-config). Child crashes are
         //  detected sooner via process liveness; this only bounds the pathological alive-but-silent case.
-        private val readinessTimeout: Duration = Duration.ofSeconds(120)
+        val defaultReadinessTimeout: Duration = Duration.ofSeconds(120)
+
+        // Bounds both the memory a chatty child costs and the payload a failed/exited row puts on the wire.
+        private const val recentOutputLines = 100
 
 
         //-------------------------------------------------
@@ -28,10 +31,12 @@ class MainJarProcess private constructor (
             location: Path,
             port: Int,
             processRegistry: ProcessRegistry,
-            jvmArgs: String
+            jvmArgs: String,
+            logDir: Path,
+            readinessTimeout: Duration
         ): MainJarProcess {
             val home = location.parent
-            return start(name, location, port, processRegistry, home, jvmArgs)
+            return start(name, location, port, processRegistry, home, jvmArgs, logDir, readinessTimeout)
         }
 
 
@@ -41,21 +46,35 @@ class MainJarProcess private constructor (
             port: Int,
             processRegistry: ProcessRegistry,
             home: Path,
-            jvmArgs: String
+            jvmArgs: String,
+            logDir: Path,
+            readinessTimeout: Duration
         ): MainJarProcess {
             val process = startProcess(
                     name, home, location, port, processRegistry, jvmArgs)
 
-            val drain = startDrain(process)
-
-            val mainJarProcess = MainJarProcess(name, process, drain, processRegistry)
+            val mainJarProcess = MainJarProcess(
+                    name, process, processRegistry, logDir.resolve("$name.log"))
 
             val ready = ProcessAwaitUtil.awaitAvailable(port, process, readinessTimeout)
             if (! ready) {
                 // Child died or never came up: reap it (also unregisters from processRegistry) and fail,
                 //  so ProjectRegistry marks the project FAILED rather than leaving it stuck STARTING.
+                val bootExitCode =
+                    if (process.isAlive) {
+                        null
+                    }
+                    else {
+                        process.exitValue()
+                    }
+
+                // kill() joins the drain, so the output tail is complete by the time it returns.
                 mainJarProcess.kill()
-                throw IllegalStateException("Project '$name' did not become available on port $port")
+
+                throw MainJarProcessStartException(
+                    "Project '$name' did not become available on port $port",
+                    bootExitCode,
+                    mainJarProcess.recentOutput())
             }
 
             return mainJarProcess
@@ -107,10 +126,19 @@ class MainJarProcess private constructor (
             return processRegistry.start(
                     name, processSpec, attributes)
         }
+    }
 
 
-        private fun startDrain(process: Process): Thread {
-            val drain = Thread {
+    //-----------------------------------------------------------------------------------------------------------------
+    private val recentLines = ArrayDeque<String>()
+
+    // Initialized last: the drain thread it starts publishes into the fields above.
+    private val drain = startDrain(LineLogTee(logFile))
+
+
+    private fun startDrain(tee: LineLogTee): Thread {
+        val drain = Thread {
+            try {
                 val reader = process.inputStream.bufferedReader()
 
                 while (true) {
@@ -118,15 +146,47 @@ class MainJarProcess private constructor (
                             ?: break
 
                     println(">> $line")
+                    record(line)
+                    tee.appendLine(line)
                 }
             }
+            finally {
+                tee.close()
+            }
+        }
 
-            drain.start()
+        drain.start()
 
-            return drain
+        return drain
+    }
+
+
+    private fun record(line: String) {
+        synchronized(recentLines) {
+            if (recentLines.size == recentOutputLines) {
+                recentLines.removeFirst()
+            }
+            recentLines.addLast(line)
         }
     }
 
+
+    // The tail of what the child has written so far (stderr included — the spawn merges it into stdout).
+    fun recentOutput(): List<String> {
+        return synchronized(recentLines) {
+            recentLines.toList()
+        }
+    }
+
+
+    // Process.onExit() hands out a fresh future per call, so this composes with the ProcessRegistry's own
+    //  exit handling. Dispatched asynchronously to keep the callback off the process-reaper thread; it
+    //  also fires for a child that already exited before this was called.
+    fun onExit(callback: (Int) -> Unit) {
+        process.onExit().thenAcceptAsync { exited ->
+            callback(exited.exitValue())
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

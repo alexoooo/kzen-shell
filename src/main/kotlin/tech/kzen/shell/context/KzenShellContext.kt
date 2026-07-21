@@ -26,7 +26,7 @@ class KzenShellContext(
     val processRegistry = ProcessRegistry()
     val mainJarRunner = MainJarRunner(processRegistry)
 
-    val projectRegistry = ProjectRegistry(mainJarRunner)
+    val projectRegistry = ProjectRegistry(mainJarRunner, processRegistry)
 
     val httpClient = HttpClient(CIO) {
         followRedirects = false

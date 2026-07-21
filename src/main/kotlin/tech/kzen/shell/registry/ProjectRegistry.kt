@@ -3,6 +3,7 @@ package tech.kzen.shell.registry
 import org.slf4j.LoggerFactory
 import tech.kzen.shell.model.RunningProjectStatus
 import tech.kzen.shell.process.MainJarProcess
+import tech.kzen.shell.process.MainJarProcessStartException
 import tech.kzen.shell.process.MainJarRunner
 import tech.kzen.shell.util.FreePortUtil
 import java.nio.file.Files
@@ -13,12 +14,13 @@ import java.util.concurrent.atomic.AtomicLong
 
 
 // Tracks user-launched projects and their lifecycle state (starting -> running -> stopping, or
-//  starting -> failed). Both start() and stop() are ASYNCHRONOUS: they mutate state and return
-//  immediately, doing the blocking spawn / kill on a background thread. The launcher polls list()
-//  for state, so a page refresh no longer loses in-progress work. Replaces the previous Guava-cache
+//  starting -> failed, or running -> exited). Both start() and stop() are ASYNCHRONOUS: they mutate state
+//  and return immediately, doing the blocking spawn / kill on a background thread. The launcher polls
+//  list() for state, so a page refresh no longer loses in-progress work. Replaces the previous Guava-cache
 //  single-flight model, which blocked the HTTP request for the entire child-JVM boot.
 class ProjectRegistry(
-    private val mainJarRunner: MainJarRunner
+    private val mainJarRunner: MainJarRunner,
+    private val processRegistry: ProcessRegistry
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private companion object {
@@ -33,13 +35,23 @@ class ProjectRegistry(
         STARTING("starting"),
         RUNNING("running"),
         STOPPING("stopping"),
-        FAILED("failed")
+
+        // Never came up: spawn error, death during boot, or readiness timeout.
+        FAILED("failed"),
+
+        // Died on its own after it was running.
+        EXITED("exited");
+
+
+        // Nothing further is pending, so a start replaces the entry and a stop dismisses it.
+        val terminal: Boolean
+            get() = this == FAILED || this == EXITED
     }
 
 
-    // Mutable per-project record. `state` and `process` are guarded by the entry's monitor for the
-    //  start/stop hand-off (a stop arriving mid-boot must be observed by the start task, and vice
-    //  versa); other reads (list()) tolerate a slightly-stale snapshot. `sequence` is a monotonic
+    // Mutable per-project record. `state`, `process` and the failure detail are guarded by the entry's
+    //  monitor for the start/stop hand-off (a stop arriving mid-boot must be observed by the start task,
+    //  and vice versa); other reads (list()) tolerate a slightly-stale snapshot. `sequence` is a monotonic
     //  start ordinal used to render list() newest-first (a just-started project appears at the top).
     private class Entry(
         val name: String,
@@ -49,6 +61,8 @@ class ProjectRegistry(
     ) {
         var state: ProjectState = ProjectState.STARTING
         var process: MainJarProcess? = null
+        var exitCode: Int? = null
+        var failureOutput: List<String>? = null
     }
 
 
@@ -74,18 +88,30 @@ class ProjectRegistry(
     fun list(): List<RunningProjectStatus> {
         return entries.values
             .sortedByDescending { it.sequence }
-            .map { RunningProjectStatus(it.name, it.state.wire) }
+            .map { RunningProjectStatus(it.name, it.state.wire, it.exitCode, recentOutput(it)) }
+    }
+
+
+    // The child's last words, shown by the launcher under a failed/exited row. Read lazily for EXITED
+    //  rather than snapshotted when the child dies: the drain has consumed the tail long before the
+    //  first poll arrives, and the exit callback stays free of blocking work.
+    private fun recentOutput(entry: Entry): List<String>? {
+        return when (entry.state) {
+            ProjectState.FAILED -> entry.failureOutput
+            ProjectState.EXITED -> entry.process?.recentOutput()
+            else -> null
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     // Idempotent: a start for a name that is already starting/running/stopping is a no-op. A start for
-    //  a name whose previous attempt FAILED replaces it with a fresh attempt.
+    //  a name in a terminal state replaces it with a fresh attempt.
     fun start(name: String, location: Path, jvmArgs: String) {
         var created: Entry? = null
 
         entries.compute(name) { _, existing ->
-            if (existing != null && existing.state != ProjectState.FAILED) {
+            if (existing != null && !existing.state.terminal) {
                 existing
             }
             else {
@@ -115,6 +141,14 @@ class ProjectRegistry(
                 }
                 else {
                     entry.state = ProjectState.FAILED
+                    if (e is MainJarProcessStartException) {
+                        entry.exitCode = e.exitCode
+                        entry.failureOutput = e.recentOutput
+                    }
+                    else {
+                        // Nothing was spawned (bad layout, corrupt jar path): the message is all there is.
+                        entry.failureOutput = e.message?.let { listOf(it) }
+                    }
                 }
             }
             return
@@ -133,7 +167,28 @@ class ProjectRegistry(
         if (stopRequested) {
             process.kill()
             entries.remove(entry.name, entry)
+            return
         }
+
+        process.onExit { exitCode ->
+            onChildExit(entry, exitCode)
+        }
+    }
+
+
+    // A child death only surfaces as EXITED while the project is RUNNING: from STOPPING the stop path
+    //  owns removal, so a deliberate stop is never reported as a crash.
+    private fun onChildExit(entry: Entry, exitCode: Int) {
+        synchronized(entry) {
+            if (entry.state != ProjectState.RUNNING) {
+                return
+            }
+
+            entry.state = ProjectState.EXITED
+            entry.exitCode = exitCode
+        }
+
+        logger.warn("Project '{}' exited with code {}", entry.name, exitCode)
     }
 
 
@@ -156,10 +211,12 @@ class ProjectRegistry(
 
     //-----------------------------------------------------------------------------------------------------------------
     // Idempotent. RUNNING -> kill in the background. STARTING -> flag so the start task kills on
-    //  completion. FAILED -> remove (this is the UI "dismiss"). Absent -> false.
+    //  completion. FAILED / EXITED -> remove (this is the UI "dismiss"). Absent -> false.
     fun stop(name: String): Boolean {
         val entry = entries[name]
             ?: return false
+
+        var dismissedExited = false
 
         synchronized(entry) {
             when (entry.state) {
@@ -184,7 +241,18 @@ class ProjectRegistry(
                 ProjectState.FAILED -> {
                     entries.remove(name, entry)
                 }
+
+                ProjectState.EXITED -> {
+                    entries.remove(name, entry)
+                    dismissedExited = true
+                }
             }
+        }
+
+        // Deliberately outside the entry monitor: the ProcessRegistry monitor is a leaf and the two
+        //  must never nest.
+        if (dismissedExited) {
+            processRegistry.clearTombstone(name)
         }
 
         return true

@@ -13,6 +13,8 @@ import tech.kzen.shell.context.KzenShellContext
 import tech.kzen.shell.context.KzenShellProperties
 import tech.kzen.shell.security.SecurityGate
 import tech.kzen.shell.ui.DesktopUi
+import tech.kzen.shell.util.FreePortUtil
+import java.net.BindException
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -21,22 +23,49 @@ private val logger = LoggerFactory.getLogger("tech.kzen.shell.KzenShellMain")
 
 fun main(args: Array<String>) {
     val context = kzenShellInit(args)
+        ?: return
 
     context.start()
 
-    embeddedServer(
-        Netty,
-        port = context.properties.port,
-        host = "127.0.0.1"
-    ) {
-        ktorMain(context)
-        kzenShellStarted()
-    }.start(wait = true)
+    try {
+        embeddedServer(
+            Netty,
+            port = context.properties.port,
+            host = "127.0.0.1"
+        ) {
+            ktorMain(context)
+            kzenShellStarted()
+        }.start(wait = true)
+    }
+    catch (e: Exception) {
+        if (!isBindFailure(e)) {
+            throw e
+        }
+
+        // Backstop for the window between the pre-flight probe and the engine binding: reap the launcher
+        //  child this instance already spawned, then repaint over whatever the module hook put up.
+        logger.error("Unable to bind port {} — is Kzen already running?", context.properties.port)
+        context.close()
+        DesktopUi.showBindFailure(context.properties.port)
+    }
+}
+
+
+private fun isBindFailure(error: Throwable): Boolean {
+    var cursor: Throwable? = error
+    while (cursor != null) {
+        if (cursor is BindException) {
+            return true
+        }
+        cursor = cursor.cause
+    }
+    return false
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-fun kzenShellInit(args: Array<String>): KzenShellContext {
+// Null when the shell cannot run at all, having already told the user why.
+fun kzenShellInit(args: Array<String>): KzenShellContext? {
     // Identify the running shell binary in the log (headless proxy — no logo to hover, unlike the
     //  launcher/project UIs which show their build on logo hover).
     val buildInfo = BuildInfo.load("/kzen-shell-build.properties")
@@ -47,6 +76,15 @@ fun kzenShellInit(args: Array<String>): KzenShellContext {
 
     DesktopUi.setPort(properties.port)
     DesktopUi.show()
+
+    // Probed before the context exists so a second instance never downloads or spawns a launcher child of
+    //  its own. Ktor runs the application module before the engine binds, so without this the UI would
+    //  flip to "Ready" and open a browser onto the FIRST instance before the bind ever fails.
+    if (!FreePortUtil.isTcpPortFree(properties.port)) {
+        logger.error("Port {} already in use — is Kzen already running?", properties.port)
+        DesktopUi.showBindFailure(properties.port)
+        return null
+    }
 
     val context = KzenShellContext(properties)
 
