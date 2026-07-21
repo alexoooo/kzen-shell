@@ -139,7 +139,8 @@ val generateReleaseConfig = tasks.register("generateReleaseConfig") {
             writeText(
                 "launcher.zip=https://github.com/alexoooo/kzen-launcher/releases/download/" +
                     "v$releaseVersion/kzen-launcher-$releaseVersion.zip\n" +
-                "launcher.dir=work/kzen-launcher/kzen-launcher-$releaseVersion\n")
+                "launcher.dir=work/kzen-launcher/kzen-launcher-$releaseVersion\n" +
+                "project.home=work/kzen-proj\n")
         }
     }
 }

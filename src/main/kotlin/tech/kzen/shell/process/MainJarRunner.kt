@@ -19,10 +19,11 @@ class MainJarRunner(
         name: String,
         location: Path,
         port: Int,
-        jvmArgs: String
+        jvmArgs: String,
+        programArgs: List<String>
     ): MainJarProcess {
         return MainJarProcess.start(
-                name, location, port, processRegistry, jvmArgs, logDir, readinessTimeout)
+                name, location, port, processRegistry, jvmArgs, logDir, readinessTimeout, programArgs)
     }
 
 

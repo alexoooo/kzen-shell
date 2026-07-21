@@ -83,8 +83,12 @@ class KzenShellContext(
 
         val freePort = FreePortUtil.findAvailableTcpPort()
 
+        // Absolute: the launcher's working directory is its own unpack dir, so a relative home would
+        //  resolve inside the artifact cache rather than beside it.
+        val projectHome = Paths.get(properties.projectHome).toAbsolutePath().normalize()
+
         val name = path.fileName.toString()
-        mainJarRunner.start(name, jarPath, freePort, "-Xmx64m")
+        mainJarRunner.start(name, jarPath, freePort, "-Xmx64m", listOf("--project.home=$projectHome"))
     }
 
 

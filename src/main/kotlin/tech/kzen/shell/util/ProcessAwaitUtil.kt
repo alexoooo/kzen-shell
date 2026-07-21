@@ -33,7 +33,7 @@ object ProcessAwaitUtil {
             if (isAvailable(portNumber)) {
                 return true
             }
-            if (! process.isAlive) {
+            if (!process.isAlive) {
                 return false
             }
             if (System.nanoTime() >= deadlineNanos) {

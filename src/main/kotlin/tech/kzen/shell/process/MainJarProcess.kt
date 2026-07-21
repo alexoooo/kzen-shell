@@ -33,10 +33,11 @@ class MainJarProcess private constructor (
             processRegistry: ProcessRegistry,
             jvmArgs: String,
             logDir: Path,
-            readinessTimeout: Duration
+            readinessTimeout: Duration,
+            programArgs: List<String>
         ): MainJarProcess {
             val home = location.parent
-            return start(name, location, port, processRegistry, home, jvmArgs, logDir, readinessTimeout)
+            return start(name, location, port, processRegistry, home, jvmArgs, logDir, readinessTimeout, programArgs)
         }
 
 
@@ -48,16 +49,17 @@ class MainJarProcess private constructor (
             home: Path,
             jvmArgs: String,
             logDir: Path,
-            readinessTimeout: Duration
+            readinessTimeout: Duration,
+            programArgs: List<String> = listOf()
         ): MainJarProcess {
             val process = startProcess(
-                    name, home, location, port, processRegistry, jvmArgs)
+                    name, home, location, port, processRegistry, jvmArgs, programArgs)
 
             val mainJarProcess = MainJarProcess(
                     name, process, processRegistry, logDir.resolve("$name.log"))
 
             val ready = ProcessAwaitUtil.awaitAvailable(port, process, readinessTimeout)
-            if (! ready) {
+            if (!ready) {
                 // Child died or never came up: reap it (also unregisters from processRegistry) and fail,
                 //  so ProjectRegistry marks the project FAILED rather than leaving it stuck STARTING.
                 val bootExitCode =
@@ -88,7 +90,8 @@ class MainJarProcess private constructor (
             jar: Path,
             port: Int,
             processRegistry: ProcessRegistry,
-            jvmArgs: String
+            jvmArgs: String,
+            programArgs: List<String>
         ): Process {
             val javaHome = System.getProperty("java.home")
             val javaBin =  "$javaHome/bin/java"
@@ -112,6 +115,8 @@ class MainJarProcess private constructor (
             //  KzenLauncherMain (the launcher and project mains that honour these flags).
             commandBuilder.add("--managed.lifeline=stdin")
             commandBuilder.add("--parent.pid=${ProcessHandle.current().pid()}")
+
+            commandBuilder.addAll(programArgs)
 
             val command = commandBuilder.build()
             val processSpec = ProcessBuilder()

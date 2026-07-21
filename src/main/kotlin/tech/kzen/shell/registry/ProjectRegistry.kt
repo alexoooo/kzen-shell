@@ -158,7 +158,7 @@ class ProjectRegistry(
         synchronized(entry) {
             entry.process = process
             stopRequested = entry.state == ProjectState.STOPPING
-            if (! stopRequested) {
+            if (!stopRequested) {
                 entry.state = ProjectState.RUNNING
             }
         }

@@ -59,7 +59,8 @@ class ProxyHttpClientTimeoutTest {
         // The REAL configured client, not a hand-rolled copy -- deleting the HttpTimeout install from
         // KzenShellContext must fail this test. Construction is side-effect free (start() is what spawns).
         val context = KzenShellContext(
-            KzenShellProperties(path = "unused", download = "http://localhost/unused", port = port))
+            KzenShellProperties(
+                path = "unused", download = "http://localhost/unused", projectHome = "unused", port = port))
 
         try {
             val body = runBlocking {

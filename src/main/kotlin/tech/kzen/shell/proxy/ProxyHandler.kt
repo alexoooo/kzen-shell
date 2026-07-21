@@ -57,12 +57,12 @@ class ProxyHandler(
 
         // Request direction: also drop Content-Type (carried by the OutgoingContent body).
         private fun forwardRequestHeader(name: String): Boolean =
-            ! isHopByHop(name) && ! name.equals(HttpHeaders.ContentType, ignoreCase = true)
+            !isHopByHop(name) && !name.equals(HttpHeaders.ContentType, ignoreCase = true)
 
 
         // Response direction: also drop Ktor's engine-managed "unsafe" set (Content-Type/Length/TE).
         private fun forwardResponseHeader(name: String): Boolean =
-            ! isHopByHop(name) && ! HttpHeaders.isUnsafe(name)
+            !isHopByHop(name) && !HttpHeaders.isUnsafe(name)
 
 
         private fun isConnectivityFailure(error: Throwable): Boolean {
@@ -219,7 +219,7 @@ class ProxyHandler(
     private fun forwardRequestHeaders(call: ApplicationCall, builder: HttpRequestBuilder) {
         builder.headers {
             for ((headerName, values) in call.request.headers.entries()) {
-                if (! forwardRequestHeader(headerName)) {
+                if (!forwardRequestHeader(headerName)) {
                     continue
                 }
                 for (value in values) {
@@ -232,7 +232,7 @@ class ProxyHandler(
 
     private fun forwardResponseHeaders(upstream: HttpResponse, call: ApplicationCall) {
         for ((headerName, values) in upstream.headers.entries()) {
-            if (! forwardResponseHeader(headerName)) {
+            if (!forwardResponseHeader(headerName)) {
                 continue
             }
             for (value in values) {

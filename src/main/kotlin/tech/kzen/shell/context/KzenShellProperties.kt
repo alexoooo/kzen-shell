@@ -9,6 +9,11 @@ import java.util.Properties
 data class KzenShellProperties(
     val path: String,
     val download: String,
+
+    // Where the launcher keeps the user's projects and their registry. Passed to the launcher as
+    //  --project.home, so both a shell-spawned and an interactive launcher can be pointed at one home.
+    val projectHome: String,
+
     val port: Int = 8080
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -20,9 +25,15 @@ data class KzenShellProperties(
         // Properties-file keys and their equivalent --arg overrides.
         private const val launcherDirKey = "launcher.dir"
         private const val launcherZipKey = "launcher.zip"
+        private const val projectHomeKey = "project.home"
 
         private const val launcherDirArg = "--launcher.dir="
         private const val launcherZipArg = "--launcher.zip="
+        private const val projectHomeArg = "--project.home="
+
+        // Beside the launcher's artifact area rather than inside it: work/kzen-launcher is a managed cache
+        //  the shell prunes at boot, and user projects must outlive it.
+        private const val defaultProjectHome = "work/kzen-proj"
 
         private const val serverPortPrefix = "--server.port="
         private val serverPortRegex = Regex(
@@ -42,9 +53,13 @@ data class KzenShellProperties(
             val launcherZip = argValue(args, launcherZipArg) ?: properties.getProperty(launcherZipKey)
                 ?: error("No launcher source configured: set '$launcherZipKey' in $propertiesFileName or pass $launcherZipArg")
 
+            val projectHome = argValue(args, projectHomeArg) ?: properties.getProperty(projectHomeKey)
+                ?: defaultProjectHome
+
             return KzenShellProperties(
                 path = launcherDir,
                 download = asUri(launcherZip),
+                projectHome = projectHome,
                 port = readPort(args) ?: 8080)
         }
 
