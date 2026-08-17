@@ -46,7 +46,7 @@ class ProjectRegistryStateMachineTest {
 
     private val processRegistry = ProcessRegistry()
     private val mainJarRunner = MainJarRunner(processRegistry, logDir, readinessTimeout)
-    private val projectRegistry = ProjectRegistry(mainJarRunner, processRegistry)
+    private val projectRegistry = ProjectRegistry(mainJarRunner)
 
 
     @AfterTest
@@ -87,19 +87,6 @@ class ProjectRegistryStateMachineTest {
     }
 
 
-    private fun awaitTombstone(): ProcessRegistry.Tombstone {
-        val deadline = System.nanoTime() + awaitTimeout.toNanos()
-        while (true) {
-            val tombstone = processRegistry.tombstone(name)
-            if (tombstone != null) {
-                return tombstone
-            }
-            check(System.nanoTime() < deadline) { "Timed out awaiting tombstone for '$name'" }
-            Thread.sleep(50)
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun `child death surfaces as exited, and a restart supersedes it`() {
@@ -110,7 +97,6 @@ class ProjectRegistryStateMachineTest {
         val exited = awaitState(ProjectRegistry.ProjectState.EXITED)
         assertEquals(exitCode, exited.exitCode)
         assertTrue(exited.recentOutput?.isNotEmpty() == true)
-        assertEquals(exitCode, awaitTombstone().exitCode)
         assertTrue(Files.readString(logDir.resolve("$name.log")).contains("stub project ready"))
 
         StubProjectFixture.serving(home)
@@ -118,7 +104,6 @@ class ProjectRegistryStateMachineTest {
 
         val restarted = awaitState(ProjectRegistry.ProjectState.RUNNING)
         assertNull(restarted.exitCode)
-        assertNull(processRegistry.tombstone(name))
     }
 
 
@@ -128,12 +113,10 @@ class ProjectRegistryStateMachineTest {
         projectRegistry.start(name, home, "")
         awaitState(ProjectRegistry.ProjectState.RUNNING)
         awaitState(ProjectRegistry.ProjectState.EXITED)
-        awaitTombstone()
 
         assertTrue(projectRegistry.stop(name))
 
         assertTrue(projectRegistry.list().none { it.name == name })
-        assertNull(processRegistry.tombstone(name))
     }
 
 

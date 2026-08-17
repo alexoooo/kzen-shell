@@ -9,6 +9,7 @@ import io.ktor.server.routing.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import tech.kzen.shell.ui.DesktopUi
 import tech.kzen.shell.util.FreePortUtil
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -60,7 +61,8 @@ class ProxyHttpClientTimeoutTest {
         // KzenShellContext must fail this test. Construction is side-effect free (start() is what spawns).
         val context = KzenShellContext(
             KzenShellProperties(
-                path = "unused", download = "http://localhost/unused", projectHome = "unused", port = port))
+                path = "unused", download = "http://localhost/unused", projectHome = "unused", port = port),
+            DesktopUi(port))
 
         try {
             val body = runBlocking {

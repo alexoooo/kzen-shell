@@ -1,6 +1,5 @@
 package tech.kzen.shell.repo
 
-import com.google.common.io.ByteStreams
 import org.slf4j.LoggerFactory
 import java.io.BufferedOutputStream
 import java.net.URI
@@ -8,9 +7,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 
-// Downloads executable artifacts (jars), so TLS certificates are validated with the JVM's
-//  default trust store — corporate-MITM environments can supply their own via
-//  -Djavax.net.ssl.trustStore (see README).
+// Downloads executable artifacts (the launcher zip), so TLS certificates are validated with the
+//  JVM's default trust store — corporate-MITM environments can supply their own via
+//  -Djavax.net.ssl.trustStore (see README). Intentionally duplicated in kzen-launcher's
+//  DownloadService (no shared module — same rationale as SecurityGate) — keep the copies in sync.
 class DownloadService {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -30,7 +30,7 @@ class DownloadService {
             location
                 .toURL()
                 .openStream()
-                .use { input -> ByteStreams.copy(input, output) }
+                .use { input -> input.copyTo(output) }
         }
 
         logger.info("download complete: {}", bytes)

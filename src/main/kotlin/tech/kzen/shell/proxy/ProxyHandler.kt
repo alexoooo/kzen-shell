@@ -13,7 +13,6 @@ import io.ktor.utils.io.*
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
-import tech.kzen.shell.context.KzenShellProperties
 import tech.kzen.shell.model.RunningProjectStatus
 import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.registry.ProjectRegistry
@@ -22,13 +21,18 @@ import java.net.ConnectException
 import java.net.SocketException
 import java.net.URI
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 
 class ProxyHandler(
         private val projectRegistry: ProjectRegistry,
         private val processRegistry: ProcessRegistry,
-        private val properties: KzenShellProperties,
+
+        // Identity of the launcher child, which the reserved '/main/' prefix resolves to. Derived by
+        //  KzenShellContext, which spawns that same jar.
+        private val launcherJarPath: Path,
+
         private val httpClient: HttpClient
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -126,17 +130,9 @@ class ProxyHandler(
 
         val info: ProcessRegistry.Info
         if (name == "main") {
-            // TODO: centralize this logic
-            val fullPath = Paths
-                .get(properties.path)
-                .resolve("main.jar")
-                .toAbsolutePath()
-                .normalize()
-                .toString()
-
-            val mainInfo = processRegistry.findByAttribute("location", fullPath)
+            val mainInfo = processRegistry.findByJarPath(launcherJarPath)
             if (mainInfo == null) {
-                logger.warn("'main' alias unresolved (launcher not registered) for {}", fullPath)
+                logger.warn("'main' alias unresolved (launcher not registered) for {}", launcherJarPath)
                 respondProxyError(call, HttpStatusCode.ServiceUnavailable, "process-unavailable", "main")
                 return
             }
@@ -152,7 +148,7 @@ class ProxyHandler(
             info = namedInfo
         }
 
-        val port = info.attributes["port"]
+        val port = info.port
         val subPath = excludingInitialSlash.substring(endOfName + 1)
 
         val querySuffix =

@@ -34,7 +34,7 @@ fun main(args: Array<String>) {
             host = "127.0.0.1"
         ) {
             ktorMain(context)
-            kzenShellStarted()
+            kzenShellStarted(context)
         }.start(wait = true)
     }
     catch (e: Exception) {
@@ -46,7 +46,7 @@ fun main(args: Array<String>) {
         //  child this instance already spawned, then repaint over whatever the module hook put up.
         logger.error("Unable to bind port {} — is Kzen already running?", context.properties.port)
         context.close()
-        DesktopUi.showBindFailure(context.properties.port)
+        context.desktopUi.showBindFailure()
     }
 }
 
@@ -74,19 +74,19 @@ fun kzenShellInit(args: Array<String>): KzenShellContext? {
     // Launcher + project-archetype sources resolve via --args > kzen-shell.properties > GitHub default.
     val properties = KzenShellProperties.load(args)
 
-    DesktopUi.setPort(properties.port)
-    DesktopUi.show()
+    val desktopUi = DesktopUi(properties.port)
+    desktopUi.show()
 
     // Probed before the context exists so a second instance never downloads or spawns a launcher child of
     //  its own. Ktor runs the application module before the engine binds, so without this the UI would
     //  flip to "Ready" and open a browser onto the FIRST instance before the bind ever fails.
     if (!FreePortUtil.isTcpPortFree(properties.port)) {
         logger.error("Port {} already in use — is Kzen already running?", properties.port)
-        DesktopUi.showBindFailure(properties.port)
+        desktopUi.showBindFailure()
         return null
     }
 
-    val context = KzenShellContext(properties)
+    val context = KzenShellContext(properties, desktopUi)
 
     Runtime.getRuntime().addShutdownHook(Thread {
         context.close()
@@ -96,8 +96,8 @@ fun kzenShellInit(args: Array<String>): KzenShellContext? {
 }
 
 
-fun kzenShellStarted() {
-    DesktopUi.onLoaded()
+fun kzenShellStarted(context: KzenShellContext) {
+    context.desktopUi.onLoaded()
 }
 
 

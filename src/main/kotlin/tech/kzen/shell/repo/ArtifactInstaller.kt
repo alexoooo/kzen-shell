@@ -3,14 +3,14 @@ package tech.kzen.shell.repo
 import com.google.common.io.MoreFiles
 import com.google.common.io.RecursiveDeleteOption
 import org.slf4j.LoggerFactory
+import tech.kzen.shell.util.AtomicMoveUtil
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.net.URI
-import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
@@ -101,7 +101,9 @@ class ArtifactInstaller(
             downloadService.download(download, zipPath)
         }
 
-        extractZip(zipPath, staging)
+        Files.newInputStream(zipPath).use { input ->
+            unzip(input, staging)
+        }
         Files.delete(zipPath)
 
         check(Files.exists(staging.resolve(mainJarName))) {
@@ -214,14 +216,7 @@ class ArtifactInstaller(
             Files.move(target, retired)
         }
 
-        try {
-            Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE)
-        }
-        catch (e: AtomicMoveNotSupportedException) {
-            // staging and target on different stores — a plain move copies then deletes.
-            logger.info("atomic move unsupported ({}), copying across stores: {} -> {}", e.message, staging, target)
-            Files.move(staging, target)
-        }
+        AtomicMoveUtil.move(staging, target)
 
         if (Files.exists(retired)) {
             deleteRecursively(retired)
@@ -230,40 +225,40 @@ class ArtifactInstaller(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // https://www.baeldung.com/java-compress-and-uncompress
-    private fun extractZip(zipFile: Path, outputDir: Path) {
-        ZipInputStream(Files.newInputStream(zipFile)).use { zis ->
-            var zipEntry = zis.nextEntry
-            while (zipEntry != null) {
-                val newFile = newFile(outputDir, zipEntry)
-                if (zipEntry.isDirectory) {
-                    if (!Files.isDirectory(newFile)) {
-                        Files.createDirectories(newFile)
-                    }
+    // Intentionally duplicated in kzen-launcher's ProjectCreator (unzip/resolveEntry — the launcher
+    //  and shell share no module; same rationale as SecurityGate) — keep the copies in sync.
+    private fun unzip(zipInput: InputStream, destDirectory: Path) {
+        ZipInputStream(zipInput).use { zipIn ->
+            while (true) {
+                val entry: ZipEntry =
+                        zipIn.nextEntry
+                        ?: break
+
+                val filePath = resolveEntry(destDirectory, entry)
+
+                if (entry.isDirectory) {
+                    Files.createDirectories(filePath)
                 }
                 else {
-                    // fix for Windows-created archives
-                    val parent = newFile.parent
-                    if (!Files.isDirectory(parent)) {
-                        Files.createDirectories(parent)
-                    }
-
-                    Files.newOutputStream(newFile).use { output ->
-                        zis.copyTo(output)
+                    Files.createDirectories(filePath.parent)
+                    Files.newOutputStream(filePath).use {
+                        zipIn.copyTo(it)
                     }
                 }
-                zipEntry = zis.nextEntry
+                zipIn.closeEntry()
             }
         }
     }
 
-    private fun newFile(destinationDir: Path, zipEntry: ZipEntry): Path {
-        val destFile = Paths.get(destinationDir.toString(), zipEntry.name)
-        val destDirPath = destinationDir.toFile().canonicalPath
-        val destFilePath = destFile.toFile().canonicalPath
-        if (!destFilePath.startsWith(destDirPath + File.separator)) {
-            throw IOException("Entry is outside of the target dir: " + zipEntry.name)
+
+    // Guards against zip-slip: a crafted entry name (e.g. ../) must not resolve outside the target dir.
+    private fun resolveEntry(destDirectory: Path, entry: ZipEntry): Path {
+        val filePath = destDirectory.resolve(entry.name)
+        val destDirPath = destDirectory.toFile().canonicalPath
+        val entryPath = filePath.toFile().canonicalPath
+        if (entryPath != destDirPath && !entryPath.startsWith(destDirPath + File.separator)) {
+            throw IOException("Entry is outside of the target dir: ${entry.name}")
         }
-        return destFile
+        return filePath
     }
 }

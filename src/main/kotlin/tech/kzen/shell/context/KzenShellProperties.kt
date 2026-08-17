@@ -35,6 +35,9 @@ data class KzenShellProperties(
         //  the shell prunes at boot, and user projects must outlive it.
         private const val defaultProjectHome = "work/kzen-proj"
 
+        // --server.port= parsing is intentionally duplicated across the spawn protocol's mains
+        //  (kzen-auto's KzenAutoConfig, kzen-launcher's KzenLauncherConfig — no shared module);
+        //  keep the copies in sync.
         private const val serverPortPrefix = "--server.port="
         private val serverPortRegex = Regex(
             Regex.escape(serverPortPrefix) + "\\d+")

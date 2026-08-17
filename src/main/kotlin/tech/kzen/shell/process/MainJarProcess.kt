@@ -96,7 +96,7 @@ class MainJarProcess private constructor (
             val javaHome = System.getProperty("java.home")
             val javaBin =  "$javaHome/bin/java"
 
-            val jarPath = jar.toAbsolutePath().normalize().toString()
+            val jarPath = jar.toAbsolutePath().normalize()
 
             val commandBuilder = ImmutableList.builder<String>()
             commandBuilder.add(javaBin)
@@ -107,7 +107,7 @@ class MainJarProcess private constructor (
             }
 
             commandBuilder.add("-jar")
-            commandBuilder.add(jarPath)
+            commandBuilder.add(jarPath.toString())
             commandBuilder.add("--server.port=$port")
 
             // Bind the child's lifetime to ours: it self-reaps on stdin EOF (our death closes the
@@ -124,12 +124,8 @@ class MainJarProcess private constructor (
                 .directory(home.toFile())
                 .redirectErrorStream(true)
 
-            val attributes = mapOf(
-                "port" to port,
-                "location" to jarPath)
-
             return processRegistry.start(
-                    name, processSpec, attributes)
+                    name, processSpec, port, jarPath)
         }
     }
 
@@ -200,6 +196,8 @@ class MainJarProcess private constructor (
 //    }
 
 
+    // kill/signalShutdown are the parent side of the managed-lifeline protocol, intentionally
+    //  duplicated in kzen-auto-test's KzenAutoProcess (no shared module) — keep the copies in sync.
     fun kill(
         forceAfter: Duration =
             Duration.ofSeconds(15)

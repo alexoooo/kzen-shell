@@ -8,34 +8,23 @@ import javax.swing.*
 import kotlin.system.exitProcess
 
 
-object DesktopUi {
+// The port is a construction parameter because every pane it can show states the URL the shell serves on
+//  (or, on failure, the port it could not bind) — there is no window this can put up without it.
+class DesktopUi(
+    private val port: Int
+) {
     //-----------------------------------------------------------------------------------------------------------------
-    private const val title = "Kzen"
-//    private const val location = "http://localhost:8080"
+    private companion object {
+        const val title = "Kzen"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private val location: URI = URI("http://localhost:$port")
 
     private var loaded: Boolean = false
     private var hideWhenMinimized: Boolean = SystemTray.isSupported()
     private var lazyFrame: JFrame? = null
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private var port: Int = -1
-
-
-    fun setPort(port: Int) {
-        this.port = port
-    }
-
-
-    private fun port(): Int {
-        check(port != -1)
-        return port
-    }
-
-
-    private fun location(): URI {
-        return URI("http://localhost:${port()}")
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -70,7 +59,7 @@ object DesktopUi {
 
     // Replaces the loader when the shell cannot serve at all, so a second launch says what happened
     //  instead of hanging on "Loading..." forever.
-    fun showBindFailure(port: Int) {
+    fun showBindFailure() {
         SwingUtilities.invokeLater {
             if (lazyFrame == null) {
                 selectTheme()
@@ -79,7 +68,7 @@ object DesktopUi {
 
             val frame = lazyFrame!!
             frame.title = "$title - Cannot start"
-            frame.contentPane = bindFailurePane(port)
+            frame.contentPane = bindFailurePane()
             frame.revalidate()
             frame.repaint()
         }
@@ -100,7 +89,7 @@ object DesktopUi {
         }
 
         return try {
-            desktop.browse(location())
+            desktop.browse(location)
             true
         }
         catch (e: Exception) {
@@ -110,7 +99,8 @@ object DesktopUi {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun loadedPane(): JPanel {
+    // Every pane opens with the logo and one large heading; each then adds its own body.
+    private fun paneWithHeading(heading: String): JPanel {
         val pane = JPanel()
         pane.layout = BoxLayout(pane, BoxLayout.Y_AXIS)
 
@@ -121,12 +111,19 @@ object DesktopUi {
         pane.add(JLabel(" "))
         pane.add(JLabel(" "))
 
-        val label = JLabel("Ready:")
+        val label = JLabel(heading)
         label.font = Font(Font.SANS_SERIF, Font.BOLD, 32)
         label.alignmentX = Component.CENTER_ALIGNMENT
         pane.add(label)
 
-        val locationText = location().toString()
+        return pane
+    }
+
+
+    private fun loadedPane(): JPanel {
+        val pane = paneWithHeading("Ready:")
+
+        val locationText = location.toString()
 
         val f = JTextPane()
         f.contentType = "text/html"
@@ -179,20 +176,7 @@ object DesktopUi {
 
 
     private fun loadingPane(): JPanel {
-        val pane = JPanel()
-        pane.layout = BoxLayout(pane, BoxLayout.Y_AXIS)
-
-        val logo = JLabel(ImageIcon(logo()))
-        logo.alignmentX = Component.CENTER_ALIGNMENT
-        pane.add(JLabel(" "))
-        pane.add(logo)
-        pane.add(JLabel(" "))
-        pane.add(JLabel(" "))
-
-        val label = JLabel("Loading...")
-        label.font = Font(Font.SANS_SERIF, Font.BOLD, 32)
-        label.alignmentX = Component.CENTER_ALIGNMENT
-        pane.add(label)
+        val pane = paneWithHeading("Loading...")
 
         val progressBar = JProgressBar()
         progressBar.isIndeterminate = true
@@ -208,21 +192,8 @@ object DesktopUi {
 
 
     // DA5 replaces this pane with single-instance focus-existing-window behaviour.
-    private fun bindFailurePane(port: Int): JPanel {
-        val pane = JPanel()
-        pane.layout = BoxLayout(pane, BoxLayout.Y_AXIS)
-
-        val logo = JLabel(ImageIcon(logo()))
-        logo.alignmentX = Component.CENTER_ALIGNMENT
-        pane.add(JLabel(" "))
-        pane.add(logo)
-        pane.add(JLabel(" "))
-        pane.add(JLabel(" "))
-
-        val label = JLabel("Cannot start")
-        label.font = Font(Font.SANS_SERIF, Font.BOLD, 32)
-        label.alignmentX = Component.CENTER_ALIGNMENT
-        pane.add(label)
+    private fun bindFailurePane(): JPanel {
+        val pane = paneWithHeading("Cannot start")
 
         pane.add(doc(" "))
         pane.add(doc("Port $port on 127.0.0.1 is already in use."))

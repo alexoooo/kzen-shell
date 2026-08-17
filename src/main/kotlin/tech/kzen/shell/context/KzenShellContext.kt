@@ -9,16 +9,27 @@ import tech.kzen.shell.registry.ProcessRegistry
 import tech.kzen.shell.registry.ProjectRegistry
 import tech.kzen.shell.repo.ArtifactInstaller
 import tech.kzen.shell.repo.DownloadService
+import tech.kzen.shell.ui.DesktopUi
 import tech.kzen.shell.util.FreePortUtil
 import java.net.URI
+import java.nio.file.Path
 import java.nio.file.Paths
 
 
 //---------------------------------------------------------------------------------------------------------------------
 class KzenShellContext(
-    val properties: KzenShellProperties
+    val properties: KzenShellProperties,
+    val desktopUi: DesktopUi
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    // The launcher's entry-point jar: the jar start() spawns, and the identity the proxy's '/main/' alias
+    //  resolves against in the process registry — one derivation, so the two cannot disagree.
+    val launcherJarPath: Path = Paths
+        .get(properties.path)
+        .resolve("main.jar")
+        .toAbsolutePath()
+        .normalize()
+
     val downloadService = DownloadService()
 
     val artifactInstaller = ArtifactInstaller(downloadService)
@@ -26,7 +37,7 @@ class KzenShellContext(
     val processRegistry = ProcessRegistry()
     val mainJarRunner = MainJarRunner(processRegistry)
 
-    val projectRegistry = ProjectRegistry(mainJarRunner, processRegistry)
+    val projectRegistry = ProjectRegistry(mainJarRunner)
 
     val httpClient = HttpClient(CIO) {
         followRedirects = false
@@ -68,7 +79,7 @@ class KzenShellContext(
     val proxyHandler = ProxyHandler(
         projectRegistry,
         processRegistry,
-        properties,
+        launcherJarPath,
         httpClient)
 
 
@@ -79,8 +90,6 @@ class KzenShellContext(
         artifactInstaller.downloadIfAbsent(path, download)
         artifactInstaller.pruneStaleSnapshotSiblings(path)
 
-        val jarPath = path.resolve("main.jar").toAbsolutePath().normalize()
-
         val freePort = FreePortUtil.findAvailableTcpPort()
 
         // Absolute: the launcher's working directory is its own unpack dir, so a relative home would
@@ -88,7 +97,7 @@ class KzenShellContext(
         val projectHome = Paths.get(properties.projectHome).toAbsolutePath().normalize()
 
         val name = path.fileName.toString()
-        mainJarRunner.start(name, jarPath, freePort, "-Xmx64m", listOf("--project.home=$projectHome"))
+        mainJarRunner.start(name, launcherJarPath, freePort, "-Xmx64m", listOf("--project.home=$projectHome"))
     }
 
 

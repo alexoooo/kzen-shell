@@ -19,8 +19,7 @@ import java.util.concurrent.atomic.AtomicLong
 //  list() for state, so a page refresh no longer loses in-progress work. Replaces the previous Guava-cache
 //  single-flight model, which blocked the HTTP request for the entire child-JVM boot.
 class ProjectRegistry(
-    private val mainJarRunner: MainJarRunner,
-    private val processRegistry: ProcessRegistry
+    private val mainJarRunner: MainJarRunner
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     private companion object {
@@ -216,8 +215,6 @@ class ProjectRegistry(
         val entry = entries[name]
             ?: return false
 
-        var dismissedExited = false
-
         synchronized(entry) {
             when (entry.state) {
                 ProjectState.RUNNING -> {
@@ -238,21 +235,10 @@ class ProjectRegistry(
                     // Already stopping.
                 }
 
-                ProjectState.FAILED -> {
+                ProjectState.FAILED, ProjectState.EXITED -> {
                     entries.remove(name, entry)
-                }
-
-                ProjectState.EXITED -> {
-                    entries.remove(name, entry)
-                    dismissedExited = true
                 }
             }
-        }
-
-        // Deliberately outside the entry monitor: the ProcessRegistry monitor is a leaf and the two
-        //  must never nest.
-        if (dismissedExited) {
-            processRegistry.clearTombstone(name)
         }
 
         return true

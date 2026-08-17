@@ -2,20 +2,16 @@ package tech.kzen.shell.registry
 
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.time.Instant
+import java.nio.file.Path
 
 
 // Concurrency invariant: this registry's monitor is a LEAF. No method calls out to ProjectRegistry or
 //  MainJarProcess while holding it, and exit callbacks are dispatched asynchronously — never on the JVM's
 //  process-reaper thread (small stack, must not block), never under a ProjectRegistry entry monitor.
-class ProcessRegistry(
-    private val maxTombstones: Int = defaultMaxTombstones
-) {
+class ProcessRegistry {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(ProcessRegistry::class.java)
-
-        private const val defaultMaxTombstones = 100
     }
 
 
@@ -23,22 +19,14 @@ class ProcessRegistry(
     private val processes = mutableMapOf<String, Info>()
     private var closed = false
 
-    // Death records of children that exited on their own, bounded and insertion-ordered so a long-lived
-    //  shell can't accumulate them. An entry is superseded by the next successful start under the same
-    //  name, or cleared when the user dismisses the exited project.
-    private val tombstones = object: LinkedHashMap<String, Tombstone>() {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Tombstone>): Boolean {
-            return size > maxTombstones
-        }
-    }
-
 
     //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
     fun start(
         name: String,
         processBuilder: ProcessBuilder,
-        attributes: Map<String, Any>
+        port: Int,
+        jarPath: Path
     ): Process {
         check(!closed) { "already closed" }
         check(!processes.containsKey(name)) { "already started: $name" }
@@ -51,8 +39,7 @@ class ProcessRegistry(
         val process = processBuilder.start()!!
 
         processes[name] = Info(
-                name, process, attributes)
-        tombstones.remove(name)
+                name, process, port, jarPath)
 
         // thenAcceptAsync, not thenAccept: the continuation must not run on the process-reaper thread.
         process.onExit().thenAcceptAsync { exited ->
@@ -76,32 +63,12 @@ class ProcessRegistry(
         }
 
         processes.remove(name)
-        tombstones[name] = Tombstone(name, exitCode, Instant.now())
 
         logger.info("Process '{}' exited with code {}", name, exitCode)
     }
 
 
-    @Synchronized
-    fun tombstone(name: String): Tombstone? {
-        return tombstones[name]
-    }
-
-
-    @Synchronized
-    fun clearTombstone(name: String) {
-        tombstones.remove(name)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    @Synchronized
-    fun unregister(name: String) {
-        processes.remove(name)
-        logger.info("Removed process '{}'", name)
-    }
-
-
     @Synchronized
     fun unregister(process: Process) {
         val entry =
@@ -121,26 +88,20 @@ class ProcessRegistry(
 
 
     @Synchronized
-    fun get(name: String): Info {
-        return processes[name]
-            ?: throw IllegalArgumentException("Unknown project: $name")
-    }
-
-
-    @Synchronized
     fun getOrNull(name: String): Info? {
         return processes[name]
     }
 
 
+    // The launcher is registered under a name the shell chose from its unpack dir, so the '/main/' alias
+    //  finds it by the jar it was spawned from instead.
     @Synchronized
-    fun findByAttribute(attribute: String, target: Any): Info? {
-        return processes.values.find { it.attributes[attribute] == target }
+    fun findByJarPath(jarPath: Path): Info? {
+        return processes.values.find { it.jarPath == jarPath }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    @PreDestroy
     @Synchronized
     fun close() {
         closed = true
@@ -162,11 +123,8 @@ class ProcessRegistry(
     data class Info(
         val name: String,
         val process: Process,
-        val attributes: Map<String, Any>)
 
-
-    data class Tombstone(
-        val name: String,
-        val exitCode: Int,
-        val exitedAt: Instant)
+        // The port the child serves on, and the jar it was spawned from — what the proxy needs to route to it.
+        val port: Int,
+        val jarPath: Path)
 }
