@@ -25,8 +25,8 @@ There's no dev-mode `BackendDevelopment`/`FrontendDevelopment` pair — kzen-she
 ```powershell
 ./gradlew build
 java -jar build/libs/kzen-shell-*.jar
-# Use the JDK 26 toolchain explicitly if PATH java is older (see ../kzen/AGENTS.md Java-26-vs-PATH gotcha):
-& "C:/Users/ostro/.jdks/temurin-26.0.2/bin/java" -jar build/libs/kzen-shell-*.jar
+# Use a JDK ≥ 25 explicitly if PATH java is older (see ../kzen/AGENTS.md Java-25-vs-PATH gotcha):
+& "C:/Users/ostro/.jdks/temurin-25.0.4.1/bin/java" -jar build/libs/kzen-shell-*.jar
 ```
 
 End-user packaging (the `kzen-<v>.zip` distribution on GitHub releases) is produced by the `distWindows` Gradle task — see **Distribution** below (neither `dist` task is wired into `build`).
